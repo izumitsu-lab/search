@@ -47,9 +47,7 @@
       }
     }
 
-    /* ドラッグ時のブラウザデフォルト挙動を防止 */
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-    img, svg { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -185,7 +183,7 @@
     .tab-item svg { width: 26px; height: 26px; fill: currentColor; }
     .tab-label { font-size: 10px; font-weight: 600; }
 
-    /* 中央のFAB (フォルダ選択ポップアップ起動) */
+    /* 中央のFAB */
     .tab-fab-container { position: relative; width: 80px; height: 100%; display: flex; justify-content: center; }
     .tab-fab {
       position: absolute; top: -24px;
@@ -747,11 +745,17 @@
       });
     });
 
+    // 🌟 多重登録防止フラグ
+    let isFolderDragSetup = false;
     let draggingFolderItem = null;
     let folderDragStartIndex = -1;
+    let folderDragClone = null;
+
     function setupFolderDrag() {
+      if (isFolderDragSetup) return;
+      isFolderDragSetup = true;
+
       const list = document.getElementById('folderManageList');
-      let currentY = 0;
       
       const startDrag = (e) => {
         const handle = e.target.closest('.drag-handle');
@@ -761,7 +765,20 @@
         
         draggingFolderItem = handle.closest('.folder-manage-item');
         folderDragStartIndex = Array.from(list.children).indexOf(draggingFolderItem);
-        draggingFolderItem.classList.add('dragging');
+        
+        const rect = draggingFolderItem.getBoundingClientRect();
+        folderDragClone = draggingFolderItem.cloneNode(true);
+        folderDragClone.style.position = 'fixed';
+        folderDragClone.style.left = rect.left + 'px';
+        folderDragClone.style.top = rect.top + 'px';
+        folderDragClone.style.width = rect.width + 'px';
+        folderDragClone.style.height = rect.height + 'px';
+        folderDragClone.style.zIndex = '9999';
+        folderDragClone.style.pointerEvents = 'none'; 
+        folderDragClone.style.boxShadow = '0 10px 24px rgba(0,0,0,0.2)';
+        document.body.appendChild(folderDragClone);
+        
+        draggingFolderItem.style.opacity = '0.3'; 
 
         if (e.type === 'mousedown') {
           document.addEventListener('mousemove', moveDrag, {passive: false});
@@ -770,29 +787,42 @@
       };
 
       const moveDrag = (e) => {
-        if (!draggingFolderItem) return;
+        if (!draggingFolderItem || !folderDragClone) return;
         e.preventDefault(); 
-        currentY = e.clientY || (e.touches && e.touches[0].clientY);
+        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         
-        const overItem = document.elementFromPoint(clientX, currentY)?.closest('.folder-manage-item');
+        folderDragClone.style.top = (clientY - folderDragClone.offsetHeight / 2) + 'px';
+
+        const overItem = document.elementFromPoint(clientX, clientY)?.closest('.folder-manage-item');
         if (overItem && overItem !== draggingFolderItem) {
           const rect = overItem.getBoundingClientRect();
-          const next = (currentY - rect.top) / (rect.height) > 0.5;
+          const next = (clientY - rect.top) / (rect.height) > 0.5;
           list.insertBefore(draggingFolderItem, next ? overItem.nextSibling : overItem);
         }
       };
 
       const endDrag = (e) => {
         if (!draggingFolderItem) return;
-        draggingFolderItem.classList.remove('dragging');
+        
+        if (folderDragClone) {
+          folderDragClone.remove();
+          folderDragClone = null;
+        }
+        draggingFolderItem.style.opacity = '1';
         
         const newIndex = Array.from(list.children).indexOf(draggingFolderItem);
-        if (folderDragStartIndex !== newIndex) {
+        if (folderDragStartIndex !== newIndex && newIndex !== -1) {
           const moved = searchEnginesData.splice(folderDragStartIndex, 1)[0];
           searchEnginesData.splice(newIndex, 0, moved);
           saveSearchEngines(); renderSearchEngines();
-          if(currentFolderIndex === folderDragStartIndex) currentFolderIndex = newIndex;
+          if(currentFolderIndex === folderDragStartIndex) {
+              currentFolderIndex = newIndex;
+          } else if (currentFolderIndex > folderDragStartIndex && currentFolderIndex <= newIndex) {
+              currentFolderIndex--;
+          } else if (currentFolderIndex < folderDragStartIndex && currentFolderIndex >= newIndex) {
+              currentFolderIndex++;
+          }
         }
         draggingFolderItem = null;
 
@@ -875,11 +905,11 @@
             });
             btn.appendChild(deleteBadge);
             
-            let isDraggingIcon = false; // クリックとドラッグの判別用フラグ
+            let isDraggingIcon = false; 
 
             btn.addEventListener('click', (e) => {
               if (e.target.closest('.card-delete-badge')) return; 
-              if (isDraggingIcon) return; // ドラッグ直後のクリックは無視
+              if (isDraggingIcon) return; 
               
               if (!isEditMode) {
                 if (e.metaKey || e.ctrlKey) return; executeSearch(engine.url, engine.home, engine.openMode);
@@ -985,7 +1015,6 @@
               document.removeEventListener('mousemove', moveDrag);
               document.removeEventListener('mouseup', endDrag);
               
-              // クリックイベントの誤爆を防ぐため少し遅らせてフラグを戻す
               setTimeout(() => { isDraggingIcon = false; }, 100);
             };
 
