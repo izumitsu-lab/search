@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>Search Launch</title>
@@ -14,15 +14,18 @@
       --card-bg: #ffffff;
       --text-main: #1c1c1e;
       --text-sub: #8e8e93;
-      --accent-color: #000000;
-      --nav-border: #e5e5ea;
+      --nav-border: rgba(60, 60, 67, 0.12);
       --shadow-color: rgba(0, 0, 0, 0.04);
       --hover-shadow: rgba(0, 0, 0, 0.08);
-      --menu-bg: #ffffff;
-      --menu-hover: #f2f2f7;
+      --menu-bg: rgba(255, 255, 255, 0.75);
+      --menu-hover: rgba(0, 0, 0, 0.05);
       --menu-border: rgba(0,0,0,0.1);
       --app-blue: #007aff;
       --app-green: #34c759;
+      --app-red: #ff3b30;
+      
+      --safe-bottom: env(safe-area-inset-bottom, 20px);
+      --safe-top: env(safe-area-inset-top, 20px);
     }
 
     /* 🌙 カラーパレット (ダークモード対応) */
@@ -32,19 +35,19 @@
         --card-bg: #1c1c1e;
         --text-main: #ffffff;
         --text-sub: #8e8e93;
-        --accent-color: #ffffff;
-        --nav-border: #38383a;
+        --nav-border: rgba(235, 235, 245, 0.15);
         --shadow-color: rgba(0, 0, 0, 0.2);
         --hover-shadow: rgba(0, 0, 0, 0.4);
-        --menu-bg: #2c2c2e;
-        --menu-hover: #3a3a3c;
-        --menu-border: rgba(255,255,255,0.1);
+        --menu-bg: rgba(28, 28, 30, 0.75);
+        --menu-hover: rgba(255, 255, 255, 0.1);
+        --menu-border: rgba(255,255,255,0.15);
         --app-blue: #0a84ff;
         --app-green: #30d158;
+        --app-red: #ff453a;
       }
     }
 
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -57,267 +60,247 @@
     
     .view {
       position: absolute; top: 0; left: 0; right: 0; bottom: 0;
-      display: flex; flex-direction: column; opacity: 0; pointer-events: none; 
+      display: flex; flex-direction: column; opacity: 1; pointer-events: auto; 
       background-color: var(--bg-color);
       transition: opacity 0.25s ease;
     }
-    .view.scrollable { overflow-y: auto; }
-    .view.active { opacity: 1; pointer-events: auto; z-index: 5; }
 
-    /* 共通コンポーネント: ヘッダー＆タブ */
-    header {
-      background-color: var(--bg-color);
-      @supports (backdrop-filter: blur(20px)) { background-color: color-mix(in srgb, var(--bg-color) 85%, transparent); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-      position: relative; z-index: 10; border-bottom: 1px solid var(--nav-border); flex-shrink: 0;
+    /* 📱 検索画面 ヘッダー */
+    .search-header-container {
+      padding: max(20px, var(--safe-top)) 24px 12px;
+      flex-shrink: 0; z-index: 20; background-color: var(--bg-color);
     }
-    .tabs { display: flex; gap: 28px; padding: 16px 32px 0; overflow-x: auto; scroll-behavior: smooth; -webkit-overflow-scrolling: touch; scrollbar-width: none; align-items: baseline;}
-    .tabs::-webkit-scrollbar { display: none; }
-    .tab { font-size: 15px; font-weight: 500; color: var(--text-sub); cursor: pointer; padding-bottom: 12px; white-space: nowrap; transition: all 0.2s ease; position: relative; user-select: none; }
-    .tab:hover { color: var(--text-main); }
-    .tab.active { color: var(--text-main); font-weight: 600; }
-    .tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; width: 100%; height: 2px; background: var(--accent-color); border-radius: 2px 2px 0 0; }
-    .tab.dragging { opacity: 0.4; transform: scale(0.95); }
-    .tab.drag-over { color: var(--app-blue); background: var(--menu-hover); border-radius: 6px 6px 0 0; }
-    
-    .add-folder-btn { font-size: 14px; font-weight: 600; opacity: 0; color: var(--app-blue); padding-left: 8px; padding-right: 8px; transition: opacity 0.3s ease; }
-    .add-folder-btn:hover { opacity: 1 !important; transform: translateY(-1px); }
-
-    .slider { display: flex; flex: 1; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
-    .slider::-webkit-scrollbar { display: none; }
-    .folder { min-width: 100%; width: 100%; flex-shrink: 0; height: 100%; padding: 32px; scroll-snap-align: start; overflow-y: auto; overflow-x: hidden; }
-    
     @media (max-width: 768px) { 
-      .folder { padding: 20px 16px; overflow-x: hidden; } 
+      .search-header-container { padding: max(16px, var(--safe-top)) 16px 12px; }
     }
 
-    /* 検索エンジンのグリッドと小見出し */
-    .engine-grid { display: grid; gap: 12px; max-width: 1400px; margin: 0 auto; align-content: start; padding-bottom: 120px; min-height: 100%;}
-    
-    /* 🖥️ PC時のアイコンサイズ設定（設定から変更可能） */
-    body.grid-size-120 .engine-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
-    body.grid-size-140 .engine-grid { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
-    body.grid-size-160 .engine-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-    
-    /* 📱 スマホ時のグリッド表示設定（3列に変更し余白を詰める） */
-    @media (max-width: 768px) { 
-      .engine-grid { grid-template-columns: repeat(3, 1fr) !important; gap: 10px; padding-bottom: 100px; }
-    }
-    
-    /* 🌟 小見出し */
-    .section-heading {
-      grid-column: 1 / -1;
-      font-size: 14px;
-      font-weight: 600;
-      color: var(--text-main);
-      letter-spacing: -0.2px;
-      padding: 0 4px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      user-select: none;
-      cursor: grab;
-      transition: opacity 0.2s;
-    }
-    .section-heading:active { cursor: grabbing; }
-    .section-heading.dragging { opacity: 0.4; }
-    
-    /* 小見出しのスペース設定 */
-    body.heading-space-small .section-heading { margin-top: 8px; margin-bottom: -4px; }
-    body.heading-space-medium .section-heading { margin-top: 24px; margin-bottom: 4px; }
-    body.heading-space-large .section-heading { margin-top: 40px; margin-bottom: 12px; }
-    .section-heading:first-child { margin-top: 0px !important; }
-
-    @media (max-width: 768px) {
-      body.heading-space-small .section-heading { margin-top: 4px; margin-bottom: -2px; }
-      body.heading-space-medium .section-heading { margin-top: 16px; margin-bottom: 2px; }
-      body.heading-space-large .section-heading { margin-top: 28px; margin-bottom: 8px; }
-      .section-heading:first-child { margin-top: 0px !important; }
-    }
-
-    /* 🌟 小見出し追加ボタン */
-    .add-heading-btn {
-      grid-column: 1 / -1;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-sub);
-      background: transparent;
-      border: 2px dashed var(--nav-border);
-      border-radius: 12px;
-      padding: 12px;
-      text-align: center;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      margin-top: 8px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      opacity: 0;
-    }
-    .add-heading-btn:hover { background: var(--menu-hover); color: var(--app-blue); border-color: var(--app-blue); transform: translateY(-2px); opacity: 1 !important; }
-    .add-heading-btn svg { width: 18px; height: 18px; fill: currentColor; }
-
-    /* カードのスタイル */
-    .card { background: var(--card-bg); border-radius: 12px; text-decoration: none; color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: space-between; aspect-ratio: 4 / 3; padding: 16px 12px 12px; transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1); box-shadow: 0 2px 8px var(--shadow-color), 0 1px 2px var(--shadow-color); border: 1px solid rgba(128, 128, 128, 0.05); cursor: pointer; user-select: none; width: 100%; min-width: 0; }
-    .card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px var(--hover-shadow), 0 4px 8px var(--shadow-color); }
-    .card.dragging { opacity: 0.4; transform: scale(0.95); box-shadow: none; }
-    .card-icon { width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; pointer-events: none; min-height: 0; }
-    .card-icon img { max-width: 56px; max-height: 56px; width: 100%; height: 100%; object-fit: contain; border-radius: 8px; background: transparent; }
-    .card-title { font-size: 13px; font-weight: 600; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-sub); pointer-events: none; }
-    
-    /* 📱 スマホ時のカード調整 */
-    @media (max-width: 768px) {
-      .card { padding: 12px 8px 8px; border-radius: 10px; aspect-ratio: 1 / 1; }
-      .card-title { font-size: 11px; }
-    }
-
-    /* 追加ボタン */
-    .add-engine-btn { background: transparent; border: 2px dashed var(--nav-border); box-shadow: none; opacity: 0; transition: opacity 0.3s, background 0.2s; justify-content: center;}
-    .add-engine-btn:hover { opacity: 1 !important; background: var(--menu-hover); border-color: var(--app-blue); transform: translateY(-2px); box-shadow: none;}
-    .add-engine-btn .card-icon svg { width: 32px; height: 32px; fill: var(--text-sub); transition: fill 0.2s; }
-    .add-engine-btn:hover .card-icon svg { fill: var(--app-blue); }
-
-    /* 検索画面トップバー (左に設定ボタンを配置) */
-    .search-top-bar { padding: 32px 32px 16px; flex-shrink: 0; background-color: var(--bg-color); z-index: 20; display: flex; align-items: center; justify-content: center; gap: 16px; }
-    @media (max-width: 768px) { .search-top-bar { padding: 24px 16px 12px; gap: 12px; } }
-    
-    .header-settings-btn { background: transparent; border: none; padding: 10px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; fill: var(--text-sub); transition: background 0.2s, fill 0.2s; flex-shrink: 0; margin-left: -8px; }
-    .header-settings-btn:hover { background: var(--nav-border); fill: var(--text-main); }
-    .header-settings-btn svg { width: 24px; height: 24px; }
-
-    .search-input-wrapper { position: relative; width: 100%; max-width: 680px; display: flex; align-items: center; flex: 1; }
+    /* 🔍 検索バー */
+    .search-input-wrapper { position: relative; width: 100%; max-width: 680px; margin: 0 auto; display: flex; align-items: center; }
     .search-icon { position: absolute; left: 16px; width: 20px; height: 20px; fill: var(--text-sub); pointer-events: none; }
-    .search-input { width: 100%; padding: 16px 90px 16px 48px; font-size: 17px; border-radius: 16px; border: 1px solid var(--nav-border); background: var(--card-bg); color: var(--text-main); box-shadow: 0 4px 16px var(--shadow-color); outline: none; transition: all 0.2s ease; -webkit-appearance: none; }
+    .search-input { width: 100%; padding: 14px 90px 14px 44px; font-size: 17px; border-radius: 999px; border: 1px solid var(--nav-border); background: var(--card-bg); color: var(--text-main); box-shadow: 0 4px 12px var(--shadow-color); outline: none; transition: all 0.2s ease; -webkit-appearance: none; }
     .search-input::-webkit-search-cancel-button { display: none; }
-    .search-input:focus { border-color: var(--app-blue); box-shadow: 0 4px 20px rgba(0, 122, 255, 0.15); }
+    .search-input:focus { border-color: var(--app-blue); box-shadow: 0 4px 20px rgba(0, 122, 255, 0.2); }
     .search-input::placeholder { color: var(--text-sub); opacity: 0.7; }
-    .search-actions { position: absolute; right: 8px; display: flex; align-items: center; gap: 2px; }
+    .search-actions { position: absolute; right: 6px; display: flex; align-items: center; gap: 2px; }
     .icon-btn { background: transparent; border: none; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; fill: var(--text-sub); transition: background 0.2s, fill 0.2s; }
     .icon-btn:hover { background: var(--nav-border); fill: var(--text-main); }
     .icon-btn svg { width: 18px; height: 18px; }
-    
-    .history-popup { display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 12px; background: var(--menu-bg); border: 1px solid var(--menu-border); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15); border-radius: 16px; max-height: 300px; overflow-y: auto; z-index: 100; backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px); }
-    .history-item { padding: 14px 20px; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 14px; color: var(--text-main); border-bottom: 1px solid var(--nav-border); transition: background 0.15s; }
-    .history-item:last-child { border-bottom: none; }
+
+    /* ✨ ふわっと表示されるフォルダ名通知 (HUD) */
+    .folder-hud {
+      position: absolute;
+      top: calc(max(20px, var(--safe-top)) + 76px);
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      background: rgba(0, 0, 0, 0.65);
+      color: #ffffff;
+      padding: 12px 28px;
+      border-radius: 999px;
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      backdrop-filter: blur(15px);
+      -webkit-backdrop-filter: blur(15px);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.2, 0.9, 0.3, 1), transform 0.3s cubic-bezier(0.2, 0.9, 0.3, 1);
+      z-index: 1000;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.15);
+      white-space: nowrap;
+    }
+    .folder-hud.show { opacity: 1; transform: translateX(-50%) scale(1); }
+
+    /* ⏳ 履歴ポップアップ */
+    .history-popup { display: none; position: absolute; top: 100%; left: 0; right: 0; margin-top: 12px; background: var(--menu-bg); border: 1px solid var(--menu-border); box-shadow: 0 12px 32px rgba(0, 0, 0, 0.15); border-radius: 20px; max-height: 300px; overflow-y: auto; z-index: 100; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); padding: 8px 0;}
+    .history-item { padding: 12px 20px; font-size: 16px; cursor: pointer; display: flex; align-items: center; gap: 14px; color: var(--text-main); transition: background 0.15s; }
     .history-item:hover { background: var(--menu-hover); }
     .history-icon { width: 18px; height: 18px; fill: var(--text-sub); flex-shrink: 0; }
     .history-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .history-delete { padding: 6px; fill: var(--text-sub); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: -8px; transition: 0.2s; }
-    .history-delete:hover { background: rgba(255,0,0,0.1); fill: #ff3b30; }
-    .history-empty { padding: 24px; text-align: center; color: var(--text-sub); font-size: 14px; }
+    .history-delete:hover { background: rgba(255,0,0,0.1); fill: var(--app-red); }
 
-    /* 設定画面 */
-    .settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 24px; padding: 0 4px; }
-    .page-title { font-size: 28px; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 0; }
+    /* 📂 スライダー＆グリッド */
+    .slider { display: flex; flex: 1; overflow-x: auto; overflow-y: hidden; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scrollbar-width: none; scroll-behavior: smooth;}
+    .slider::-webkit-scrollbar { display: none; }
+    .slider.no-smooth { scroll-behavior: auto !important; }
+    
+    .folder { min-width: 100%; width: 100%; flex-shrink: 0; height: 100%; padding: 16px 32px 140px; scroll-snap-align: start; overflow-y: auto; overflow-x: hidden; }
+    @media (max-width: 768px) { .folder { padding: 16px 16px 120px; } }
+
+    /* 📱 グリッド (スマホで3列固定) */
+    .engine-grid { 
+      display: grid; gap: 16px; max-width: 600px; margin: 0 auto; 
+      align-content: start; min-height: 100%;
+      grid-template-columns: repeat(3, 1fr); /* 常に3列 */
+    }
+    @media (max-width: 768px) { .engine-grid { gap: 12px; } }
+
+    /* 🎴 カード（アイコン） */
+    .card { background: var(--card-bg); border-radius: 18px; color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: space-between; aspect-ratio: 4 / 3; padding: 16px 12px 12px; transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s; box-shadow: 0 4px 12px var(--shadow-color); border: 1px solid var(--nav-border); cursor: pointer; user-select: none; width: 100%; min-width: 0; position: relative;}
+    .card:not(.empty-slot):active { transform: scale(0.92); }
+    @media (hover: hover) { .card:not(.empty-slot):hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--hover-shadow); } }
+    .card.dragging { opacity: 0.4; transform: scale(0.95) !important; box-shadow: none !important; z-index: 100; }
+    .card.drag-over-slot { transform: scale(1.05); box-shadow: 0 0 0 3px var(--app-blue); z-index: 10; }
+    .card-icon { width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; pointer-events: none; min-height: 0; }
+    .card-icon img { max-width: 56px; max-height: 56px; width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+    .card-title { font-size: 13px; font-weight: 600; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-sub); pointer-events: none; }
+    
+    .card.empty-slot { background: transparent; border: 2px dashed var(--text-sub); opacity: 0.5; box-shadow: none; justify-content: center; transition: all 0.2s; }
+    .card.empty-slot:hover { border-color: var(--app-blue); opacity: 1; color: var(--app-blue); }
+    .card.empty-slot .card-icon svg { width: 28px; height: 28px; fill: currentColor; }
+    
+    @media (max-width: 768px) {
+      .card { padding: 12px 8px 8px; border-radius: 16px; aspect-ratio: 1 / 1; }
+      .card-title { font-size: 11px; }
+      .card-icon img { max-width: 48px; max-height: 48px; }
+    }
+
+    /* 🌟 ボトムナビゲーション (App Tab Bar) */
+    .app-tab-bar {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      height: calc(70px + var(--safe-bottom)); padding-bottom: var(--safe-bottom);
+      background: var(--menu-bg); backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px);
+      border-top: 1px solid var(--nav-border);
+      display: flex; justify-content: space-evenly; align-items: center; z-index: 90;
+      box-shadow: 0 -4px 30px rgba(0,0,0,0.05);
+    }
+    .tab-item {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 4px; color: var(--text-sub); cursor: pointer; width: 70px; height: 100%; transition: color 0.2s;
+    }
+    .tab-item:hover, .tab-item.active { color: var(--app-blue); }
+    .tab-item svg { width: 26px; height: 26px; fill: currentColor; }
+    .tab-label { font-size: 10px; font-weight: 600; }
+
+    /* 中央のFAB (フォルダ選択ポップアップ起動) */
+    .tab-fab-container { position: relative; width: 80px; height: 100%; display: flex; justify-content: center; }
+    .tab-fab {
+      position: absolute; top: -24px;
+      width: 68px; height: 68px; border-radius: 50%; border: none; outline: none;
+      background: linear-gradient(135deg, var(--app-blue), #00c6ff);
+      box-shadow: 0 10px 24px rgba(0, 122, 255, 0.4);
+      color: white; display: flex; align-items: center; justify-content: center;
+      cursor: pointer; transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.2s;
+    }
+    .tab-fab:active { transform: translateY(-12px) scale(0.9); box-shadow: 0 6px 16px rgba(0, 122, 255, 0.3); }
+    .tab-fab svg { width: 30px; height: 30px; fill: white; }
+
+    /* 🌟 パッと開くボトムシート（横2列リスト） */
+    .bottom-sheet-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      z-index: 9000; display: none; /* アニメーションなし */
+    }
+    .bottom-sheet {
+      position: absolute; bottom: 0; left: 0; right: 0;
+      background: var(--menu-bg); backdrop-filter: blur(40px); -webkit-backdrop-filter: blur(40px);
+      border-radius: 28px 28px 0 0; padding: 24px 0 max(24px, var(--safe-bottom));
+      box-shadow: 0 -10px 40px rgba(0,0,0,0.2);
+      display: flex; flex-direction: column; max-height: 90vh;
+    }
+    
+    .sheet-title { text-align: center; font-size: 20px; font-weight: 700; color: var(--text-main); margin-bottom: 24px; letter-spacing: -0.5px;}
+    
+    .sheet-folder-list { 
+      display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; 
+      padding: 0 20px 24px; overflow-y: auto; max-height: calc(90vh - 80px);
+    }
+    
+    .sheet-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 14px 16px; background: var(--card-bg); border-radius: 14px;
+      font-size: 15px; font-weight: 600; color: var(--text-main);
+      box-shadow: 0 2px 8px var(--shadow-color); border: 1px solid var(--nav-border);
+      cursor: pointer; transition: transform 0.1s;
+    }
+    .sheet-item:active { transform: scale(0.95); }
+    .sheet-item.active { border-color: var(--app-blue); color: var(--app-blue); }
+    .sheet-item-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 85%; }
+    .sheet-item-check { width: 20px; height: 20px; fill: var(--app-blue); opacity: 0; flex-shrink: 0; transition: opacity 0.2s; }
+    .sheet-item.active .sheet-item-check { opacity: 1; }
+
+    /* ⚙️ 設定用ポップアップ（モーダル） */
+    .settings-modal-box {
+      width: 90%; max-width: 440px; padding: 24px 20px 20px;
+      max-height: 85vh; display: flex; flex-direction: column;
+    }
+    .settings-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 4px; flex-shrink: 0; }
     .settings-close-btn { 
-      background: var(--card-bg); border: 1px solid var(--nav-border); border-radius: 50%;
+      background: var(--bg-color); border: 1px solid var(--nav-border); border-radius: 50%;
       width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; fill: var(--text-sub); transition: all 0.2s ease; box-shadow: 0 2px 8px var(--shadow-color);
+      cursor: pointer; fill: var(--text-sub); transition: all 0.2s ease;
     }
     .settings-close-btn:hover { background: var(--nav-border); fill: var(--text-main); transform: scale(1.05); }
-    .settings-close-btn svg { width: 20px; height: 20px; }
 
-    .settings-container { padding: 40px 24px; width: 100%; max-width: 800px; margin: 0 auto; padding-bottom: 120px; }
-    .settings-section { margin-bottom: 32px; }
-    .settings-section-title { font-size: 13px; text-transform: uppercase; color: var(--text-sub); margin-bottom: 8px; margin-left: 16px; letter-spacing: 0.5px; }
-    .settings-group { background: var(--card-bg); border-radius: 12px; overflow: hidden; border: 1px solid var(--nav-border); }
-    .settings-row { padding: 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--nav-border); font-size: 16px; color: var(--text-main); cursor: pointer; transition: background 0.15s; }
+    .settings-scroll-area { overflow-y: auto; padding-right: 4px; margin-top: 12px; flex: 1; }
+    .settings-section { margin-bottom: 24px; }
+    .settings-section-title { font-size: 13px; text-transform: uppercase; color: var(--text-sub); margin-bottom: 8px; margin-left: 12px; letter-spacing: 0.5px; }
+    .settings-group { background: var(--bg-color); border-radius: 16px; overflow: hidden; border: 1px solid var(--nav-border); }
+    .settings-row { padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--nav-border); font-size: 15px; color: var(--text-main); cursor: pointer; transition: background 0.15s; }
     .settings-row:active { background: var(--menu-hover); }
     .settings-row:last-child { border-bottom: none; }
-    .settings-row.danger { color: #ff3b30; justify-content: center; font-weight: 600; }
+    .settings-row.danger { color: var(--app-red); justify-content: center; font-weight: 600; }
     .settings-row.blue { color: var(--app-blue); justify-content: center; font-weight: 600; }
     
     .custom-select {
-      appearance: none; background-color: transparent; border: none; font-size: 16px; color: var(--text-sub); text-align: right; outline: none; cursor: pointer; padding-right: 20px;
+      appearance: none; background-color: transparent; border: none; font-size: 15px; color: var(--text-sub); text-align: right; outline: none; cursor: pointer; padding-right: 20px;
       background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%3E%3Cpath%20fill%3D%22%238e8e93%22%20d%3D%22M287%2069.4a17.6%2017.6%200%200%200-13-5.4H18.4c-5%200-9.3%201.8-12.9%205.4A17.6%2017.6%200%200%200%200%2082.2c0%205%201.8%209.3%205.4%2012.9l128%20127.9c3.6%203.6%207.8%205.4%2012.8%205.4s9.2-1.8%2012.8-5.4L287%2095c3.5-3.5%205.4-7.8%205.4-12.8%200-5-1.9-9.2-5.5-12.8z%22%2F%3E%3C%2Fsvg%3E");
       background-repeat: no-repeat; background-position: right center; background-size: 12px auto;
     }
-    .custom-select:focus { color: var(--app-blue); }
-
-    .toggle { position: relative; display: inline-block; width: 50px; height: 30px; }
+    
+    .toggle { position: relative; display: inline-block; width: 44px; height: 26px; }
     .toggle input { opacity: 0; width: 0; height: 0; }
-    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--nav-border); transition: .3s; border-radius: 30px; }
-    .toggle-slider:before { position: absolute; content: ""; height: 26px; width: 26px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: var(--nav-border); transition: .3s; border-radius: 26px; }
+    .toggle-slider:before { position: absolute; content: ""; height: 22px; width: 22px; left: 2px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
     .toggle input:checked + .toggle-slider { background-color: var(--app-green); }
-    .toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+    .toggle input:checked + .toggle-slider:before { transform: translateX(18px); }
 
-    /* 🌟 下部ナビゲーション（編集モード切替のみ） */
-    .bottom-nav { 
-      position: fixed; bottom: 0; right: 0; left: 0;
-      height: 60px; padding-bottom: env(safe-area-inset-bottom); 
-      background-color: transparent; border-top: 1px solid transparent; 
-      display: flex; justify-content: flex-end; padding-right: 24px; align-items: center; z-index: 90; 
-      transition: all 0.3s ease;
+    /* 📂 フォルダ管理モーダル */
+    .folder-manage-item {
+      display: flex; align-items: center; background: var(--card-bg);
+      border-radius: 14px; box-shadow: 0 2px 6px var(--shadow-color);
+      border: 1px solid var(--nav-border); transition: transform 0.2s, box-shadow 0.2s;
     }
-    .bottom-nav:hover, .bottom-nav.force-show {
-      background-color: var(--bg-color); 
-      border-top: 1px solid var(--nav-border);
-    }
-    @supports (backdrop-filter: blur(20px)) {
-      .bottom-nav:hover, .bottom-nav.force-show {
-        background-color: color-mix(in srgb, var(--bg-color) 85%, transparent); 
-        backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); 
-      }
-    }
-    .nav-item { 
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; 
-      color: var(--text-sub); cursor: pointer; height: 100%; transition: all 0.2s; 
-      opacity: 0; transform: translateY(10px); pointer-events: none;
-    }
-    .bottom-nav:hover .nav-item, .bottom-nav.force-show .nav-item { opacity: 1; transform: translateY(0); pointer-events: auto; }
-    .nav-item:hover { color: var(--text-main); }
-    .nav-item.active { color: var(--app-blue); }
-    .nav-item svg { width: 24px; height: 24px; fill: currentColor; }
-    .nav-label { font-size: 11px; font-weight: 600; }
+    .folder-manage-item.dragging { box-shadow: 0 10px 24px var(--hover-shadow); z-index: 100; opacity: 0.9; }
+    .folder-manage-item .drag-handle { padding: 14px; color: var(--text-sub); cursor: grab; display: flex; align-items: center; }
+    .folder-manage-item .folder-name { flex: 1; font-size: 16px; font-weight: 600; padding: 14px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
+    .folder-manage-item .delete-btn { padding: 14px; color: var(--app-red); cursor: pointer; display: flex; align-items: center; }
 
-    /* 🌟 編集モード：オフ（Read Only Mode）の時のUI調整 */
-    body.read-only-mode .add-folder-btn,
-    body.read-only-mode .add-engine-btn,
-    body.read-only-mode .add-heading-btn {
-      display: none !important;
-    }
-    body.read-only-mode .section-heading,
-    body.read-only-mode .tab {
-      cursor: default;
-    }
-
-    /* 右クリックメニュー */
-    .context-menu { display: none; position: fixed; background: var(--menu-bg); border: 1px solid var(--menu-border); box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12); border-radius: 10px; padding: 6px 0; z-index: 9999; min-width: 200px; backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); }
-    .menu-item { padding: 8px 16px; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--text-main); transition: background 0.1s; }
-    .menu-item:hover { background: var(--menu-hover); }
-    .menu-item svg { width: 16px; height: 16px; fill: var(--text-sub); }
+    /* 汎用・コンテキストメニュー等 */
+    .context-menu { display: none; position: fixed; background: var(--menu-bg); border: 1px solid var(--menu-border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); border-radius: 16px; padding: 6px 0; z-index: 9999; min-width: 220px; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
+    .menu-item { padding: 10px 16px; font-size: 15px; cursor: pointer; display: flex; align-items: center; gap: 12px; color: var(--text-main); }
+    .menu-item:active { background: var(--menu-hover); }
+    .menu-item svg { width: 18px; height: 18px; fill: var(--text-sub); }
     .menu-divider { height: 1px; background: var(--menu-border); margin: 6px 0; }
 
-    /* カスタムモーダル */
-    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; opacity: 0; transition: opacity 0.2s ease; }
+    .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); z-index: 10000; align-items: center; justify-content: center; display: none; opacity: 0; transition: opacity 0.2s ease;}
     .modal-overlay.show { opacity: 1; }
-    .modal-box { background: var(--card-bg); border: 1px solid var(--menu-border); border-radius: 16px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    .modal-box { background: var(--card-bg); border: 1px solid var(--menu-border); border-radius: 24px; padding: 24px; width: 90%; max-width: 400px; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2); transform: scale(0.95); transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
     .modal-overlay.show .modal-box { transform: scale(1); }
-    .modal-box h3 { margin-bottom: 20px; font-size: 18px; font-weight: 600; color: var(--text-main); text-align: center; }
+    .modal-box h3 { margin-bottom: 20px; font-size: 18px; font-weight: 600; text-align: center; }
     .modal-inputs { display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; }
-    .modal-inputs input { padding: 14px 16px; border-radius: 10px; border: 1px solid var(--nav-border); background: var(--bg-color); color: var(--text-main); font-size: 15px; outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
-    .modal-inputs input:focus { border-color: var(--app-blue); box-shadow: 0 0 0 3px rgba(0, 122, 255, 0.15); }
+    .modal-inputs input, .modal-inputs select { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--nav-border); background: var(--bg-color); color: var(--text-main); font-size: 15px; outline: none; transition: border-color 0.2s; width: 100%; }
+    .modal-inputs input:focus, .modal-inputs select:focus { border-color: var(--app-blue); }
+    
     .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
-    .modal-btn { padding: 12px 20px; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; border: none; transition: background 0.2s; }
+    .modal-btn { padding: 12px 20px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; border: none; }
     .modal-btn.cancel { background: var(--bg-color); color: var(--text-main); }
-    .modal-btn.cancel:hover { background: var(--nav-border); }
     .modal-btn.save { background: var(--app-blue); color: #fff; }
-    .modal-btn.save:hover { background: #0056b3; }
+
+    /* 編集モード：オフの時のUI調整 */
+    body.read-only-mode .card.empty-slot { display: none !important; }
   </style>
 </head>
-<body class="heading-space-small grid-size-140">
+<body>
 
   <div class="main-content">
+    
     <!-- 🔍 検索画面 -->
-    <div id="view-search" class="view active">
-      <div class="search-top-bar">
-        <!-- ⚙️ 設定ボタン（検索バーの左） -->
-        <button id="headerSettingsBtn" class="header-settings-btn" title="設定">
-          <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
-        </button>
+    <div id="view-search" class="view">
+      <div class="search-header-container">
         <div class="search-input-wrapper">
           <svg class="search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-          <input type="text" id="searchInput" class="search-input" placeholder="ウェブや商品を検索..." autocomplete="off">
+          <input type="text" id="searchInput" class="search-input" placeholder="検索..." autocomplete="off">
           <div class="search-actions">
             <button class="icon-btn" id="clearBtn" title="クリア" style="display: none;"><svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></button>
             <button class="icon-btn" id="historyBtn" title="検索履歴"><svg viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg></button>
@@ -325,40 +308,62 @@
           <div class="history-popup" id="historyPopup"></div>
         </div>
       </div>
-      <header><div class="tabs" id="searchTabsContainer"></div></header>
+      
+      <!-- フォルダ切替通知 HUD -->
+      <div id="folderHud" class="folder-hud"></div>
+
+      <!-- スライダー（アイコン一覧） -->
       <div class="slider" id="searchSliderContainer"></div>
     </div>
+  </div>
 
-    <!-- ⚙️ 設定画面 -->
-    <div id="view-settings" class="view scrollable">
-      <div class="settings-container">
-        
-        <!-- 🌟 設定画面のヘッダー＆閉じるボタン -->
-        <div class="settings-header">
-          <h2 class="page-title">設定</h2>
-          <button class="settings-close-btn" id="settingsCloseBtn" title="閉じる">
-            <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
-          </button>
-        </div>
-        
+  <!-- 🌟 ボトムナビゲーションバー -->
+  <nav class="app-tab-bar">
+    <div class="tab-item" id="nav-edit-toggle">
+      <svg id="icon-edit-on" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+      <svg id="icon-edit-off" viewBox="0 0 24 24" style="display:none;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
+      <span class="tab-label" id="label-edit-toggle">編集中</span>
+    </div>
+
+    <!-- 中央のFAB -->
+    <div class="tab-fab-container">
+      <button class="tab-fab" id="nav-folder-select" title="フォルダ切替">
+        <svg viewBox="0 0 24 24"><path d="M4 8h4V4H4v4zm6 12h4v-4h-4v4zm-6 0h4v-4H4v4zm0-6h4v-4H4v4zm6 0h4v-4h-4v4zm6-10v4h4V4h-4zm-6 4h4V4h-4v4zm6 6h4v-4h-4v4zm0 6h4v-4h-4v4z"/></svg>
+      </button>
+    </div>
+
+    <div class="tab-item" id="nav-settings-btn">
+      <svg viewBox="0 0 24 24"><path d="M19.14,12.94c0.04-0.3,0.06-0.61,0.06-0.94c0-0.32-0.02-0.64-0.06-0.94l2.03-1.58c0.18-0.14,0.23-0.41,0.12-0.61 l-1.92-3.32c-0.12-0.22-0.37-0.29-0.59-0.22l-2.39,0.96c-0.5-0.38-1.03-0.7-1.62-0.94L14.4,2.81c-0.04-0.24-0.24-0.41-0.48-0.41 h-3.84c-0.24,0-0.43,0.17-0.47,0.41L9.25,5.35C8.66,5.59,8.12,5.92,7.63,6.29L5.24,5.33c-0.22-0.08-0.47,0-0.59,0.22L2.73,8.87 C2.62,9.08,2.66,9.34,2.86,9.48l2.03,1.58C4.84,11.36,4.8,11.69,4.8,12s0.02,0.64,0.06,0.94l-2.03,1.58 c-0.18,0.14-0.23,0.41-0.12,0.61l1.92,3.32c0.12,0.22,0.37,0.29,0.59,0.22l2.39-0.96c0.5,0.38,1.03,0.7,1.62,0.94l0.36,2.54 c0.05,0.24,0.24,0.41,0.48,0.41h3.84c0.24,0,0.43-0.17,0.47-0.41l0.36-2.54c0.59-0.24,1.13-0.56,1.62-0.94l2.39,0.96 c0.22,0.08,0.47,0,0.59-0.22l1.92-3.32c0.12-0.22,0.07-0.49-0.12-0.61L19.14,12.94z M12,15.6c-1.98,0-3.6-1.62-3.6-3.6 s1.62-3.6,3.6-3.6s3.6,1.62,3.6,3.6S13.98,15.6,12,15.6z"/></svg>
+      <span class="tab-label">設定</span>
+    </div>
+  </nav>
+
+  <!-- 🌟 パッと開くボトムシート（横2列リスト） -->
+  <div class="bottom-sheet-overlay" id="folderBottomSheet">
+    <div class="bottom-sheet" id="sheetContent">
+      <div class="sheet-title">フォルダを選択</div>
+      <div class="sheet-folder-list" id="sheetFolderList">
+        <!-- JSで生成されます -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ⚙️ 設定用ポップアップ（モーダル化） -->
+  <div id="settingsModal" class="modal-overlay">
+    <div class="modal-box settings-modal-box">
+      <div class="settings-header">
+        <h3 style="margin:0; font-size: 20px; font-weight: 700;">設定</h3>
+        <button class="settings-close-btn" id="settingsCloseBtn">
+          <svg viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      
+      <div class="settings-scroll-area">
         <div class="settings-section">
-          <div class="settings-section-title">デザイン</div>
+          <div class="settings-section-title">フォルダ管理</div>
           <div class="settings-group">
-            <div class="settings-row" style="cursor: default;">
-              <span>小見出しの余白</span>
-              <select id="settingHeadingSpace" class="custom-select">
-                <option value="small" selected>狭い</option>
-                <option value="medium">普通</option>
-                <option value="large">広い</option>
-              </select>
-            </div>
-            <div class="settings-row" style="cursor: default;">
-              <span>アイコンの大きさ</span>
-              <select id="settingGridSize" class="custom-select">
-                <option value="120">小さい (120px)</option>
-                <option value="140" selected>普通 (140px)</option>
-                <option value="160">大きい (160px)</option>
-              </select>
+            <div class="settings-row" id="openFolderManageBtn" style="justify-content: center; font-weight: 600;">
+              フォルダの管理 (並び替え・追加)
             </div>
           </div>
         </div>
@@ -367,11 +372,10 @@
           <div class="settings-section-title">リンクの開き方</div>
           <div class="settings-group">
             <div class="settings-row" style="cursor: default;">
-              <span>開き方を指定</span>
+              <span>基本の開き方</span>
               <select id="settingLinkOpenMode" class="custom-select">
                 <option value="self">現在のタブ</option>
                 <option value="blank" selected>新しいタブ</option>
-                <option value="background">バックグラウンド</option>
               </select>
             </div>
           </div>
@@ -380,21 +384,20 @@
         <div class="settings-section">
           <div class="settings-section-title">検索の設定</div>
           <div class="settings-group">
-            <div class="settings-row"><span>検索履歴を保存する</span><label class="toggle"><input type="checkbox" id="settingSaveHistory" checked><span class="toggle-slider"></span></label></div>
+            <div class="settings-row"><span>検索履歴を保存</span><label class="toggle"><input type="checkbox" id="settingSaveHistory" checked><span class="toggle-slider"></span></label></div>
           </div>
         </div>
 
         <div class="settings-section">
           <div class="settings-section-title">データ管理</div>
           <div class="settings-group">
-            <div class="settings-row blue" id="exportDataBtn"><span>データをエクスポート (JSON)</span></div>
-            <div class="settings-row blue" id="importDataBtn"><span>データをインポート (JSON)</span></div>
+            <div class="settings-row blue" id="exportDataBtn"><span>バックアップを作成</span></div>
+            <div class="settings-row blue" id="importDataBtn"><span>バックアップを復元</span></div>
           </div>
           <input type="file" id="importFileInput" accept=".json" style="display: none;">
         </div>
 
         <div class="settings-section">
-          <div class="settings-section-title">システム</div>
           <div class="settings-group">
             <div class="settings-row danger" id="initDataBtn"><span>すべてのデータを初期化</span></div>
           </div>
@@ -403,23 +406,45 @@
     </div>
   </div>
 
-  <!-- 🌟 下部ナビゲーションバー（編集モード切替ボタンのみ） -->
-  <nav class="bottom-nav">
-    <div class="nav-item" id="nav-edit-toggle" title="編集モード切り替え">
-      <svg id="icon-edit-on" viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
-      <svg id="icon-edit-off" viewBox="0 0 24 24" style="display:none;"><path d="M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z"/></svg>
-      <span class="nav-label" id="label-edit-toggle">編集：オン</span>
+  <!-- 📂 フォルダ管理モーダル -->
+  <div id="folderManageModal" class="modal-overlay">
+    <div class="modal-box" style="padding: 0; display: flex; flex-direction: column; max-height: 85vh; width: 90%; max-width: 440px; border-radius: 24px; overflow: hidden;">
+      <div style="padding: 16px 20px; border-bottom: 1px solid var(--nav-border); display: flex; justify-content: space-between; align-items: center; background: var(--menu-bg);">
+        <h3 style="margin: 0; font-size: 18px; font-weight: 700;">フォルダ管理</h3>
+        <button id="closeFolderManageBtn" class="settings-close-btn" style="width: 32px; height: 32px;">
+          <svg viewBox="0 0 24 24" style="width:16px;height:16px;"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </div>
+      <div id="folderManageList" style="flex: 1; overflow-y: auto; padding: 12px 16px; display: flex; flex-direction: column; gap: 10px; background: var(--bg-color);">
+         <!-- フォルダアイテムがJSで生成されます -->
+      </div>
+      <div style="padding: 16px; background: var(--menu-bg); border-top: 1px solid var(--nav-border);">
+        <button id="addFolderBtnInManage" style="width: 100%; padding: 14px; border-radius: 14px; border: 2px dashed var(--app-blue); color: var(--app-blue); background: transparent; font-weight: 600; font-size: 16px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+          <svg viewBox="0 0 24 24" style="width:20px;height:20px;fill:currentColor;"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+          新しいフォルダを追加
+        </button>
+      </div>
     </div>
-  </nav>
+  </div>
 
-  <!-- カスタムモーダル -->
-  <div id="customModal" class="modal-overlay" style="display:none;">
+  <!-- 汎用入力モーダル -->
+  <div id="customModal" class="modal-overlay">
     <div class="modal-box">
       <h3 id="modalTitle">Edit</h3>
       <div class="modal-inputs">
         <input type="text" id="modalInput1" autocomplete="off">
         <input type="text" id="modalInput2" autocomplete="off">
         <input type="text" id="modalInput3" autocomplete="off" placeholder="カスタムアイコンURL (任意)">
+        
+        <!-- アイコン個別設定: フォルダ移動 -->
+        <select id="modalFolderSelect" class="custom-select" style="display:none; text-align: left; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--nav-border); background: var(--bg-color); color: var(--text-main); font-size: 15px;"></select>
+        
+        <!-- アイコン個別設定: 開き方 -->
+        <select id="modalOpenMode" class="custom-select" style="display:none; text-align: left; padding: 14px 16px; border-radius: 12px; border: 1px solid var(--nav-border); background: var(--bg-color); color: var(--text-main); font-size: 15px;">
+          <option value="default">開き方：基本設定に従う</option>
+          <option value="self">開き方：現在のタブ</option>
+          <option value="blank">開き方：新しいタブ</option>
+        </select>
       </div>
       <div class="modal-actions">
         <button id="modalCancelBtn" class="modal-btn cancel">キャンセル</button>
@@ -428,55 +453,22 @@
     </div>
   </div>
 
-  <!-- コンテキストメニュー -->
-  <div id="contextMenu" class="context-menu">
-    <div class="menu-item menu-type-open" id="menuOpen"><svg viewBox="0 0 24 24"><path d="M19 19H5V5h7V3H5c-1.11 0-2 .9-2 2v14c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2v-7h-2v7zM14 3v2h3.59l-9.83 9.83 1.41 1.41L19 6.41V10h2V3h-7z"/></svg>新しいタブで開く</div>
-    <div class="menu-divider menu-type-open" id="menuDivider"></div>
-    <div class="menu-item menu-type-edit" id="menuEdit"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>編集</div>
-    <div class="menu-item menu-type-copy" id="menuCopy"><svg viewBox="0 0 24 24"><path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/></svg>URLをコピー</div>
-    <div class="menu-item menu-type-edit" id="menuRemove"><svg viewBox="0 0 24 24"><path d="M12 2C6.47 2 2 6.47 2 12s4.47 10 10 10 10-4.47 10-10S17.53 2 12 2zm5 13.59L15.59 17 12 13.41 8.41 17 7 15.59 10.59 12 7 8.41 8.41 7 12 10.59 15.59 7 17 8.41 13.41 12 17 15.59z"/></svg>削除</div>
-    <div class="menu-item menu-type-folder" id="menuRenameFolder"><svg viewBox="0 0 24 24"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34a.9959.9959 0 00-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>名前変更</div>
-    <div class="menu-item menu-type-folder" id="menuRemoveFolder"><svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.12-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z"/></svg>削除</div>
-  </div>
-
   <script>
     /* =========================================================
-       1. 🌟 各種設定のロード＆適用ロジック
+       1. 🌟 基本設定のロード
        ========================================================= */
     const settingLinkOpenMode = document.getElementById('settingLinkOpenMode');
     if (localStorage.getItem('link_open_mode')) settingLinkOpenMode.value = localStorage.getItem('link_open_mode');
-    settingLinkOpenMode.addEventListener('change', (e) => localStorage.setItem('link_open_mode', e.target.value));
 
-    // 小見出しの余白
-    const settingHeadingSpace = document.getElementById('settingHeadingSpace');
-    if (localStorage.getItem('heading_space')) settingHeadingSpace.value = localStorage.getItem('heading_space');
-    const applyHeadingSpace = () => {
-      document.body.classList.remove('heading-space-small', 'heading-space-medium', 'heading-space-large');
-      document.body.classList.add(`heading-space-${settingHeadingSpace.value}`);
-    };
-    applyHeadingSpace();
-    settingHeadingSpace.addEventListener('change', (e) => { localStorage.setItem('heading_space', e.target.value); applyHeadingSpace(); });
-
-    // アイコンの大きさ（グリッド幅）
-    const settingGridSize = document.getElementById('settingGridSize');
-    if (localStorage.getItem('grid_size')) settingGridSize.value = localStorage.getItem('grid_size');
-    const applyGridSize = () => {
-      document.body.classList.remove('grid-size-120', 'grid-size-140', 'grid-size-160');
-      document.body.classList.add(`grid-size-${settingGridSize.value}`);
-    };
-    applyGridSize();
-    settingGridSize.addEventListener('change', (e) => { localStorage.setItem('grid_size', e.target.value); applyGridSize(); });
-
-    // リンクを開く処理
-    function openLink(url) {
-      const mode = settingLinkOpenMode.value;
+    // リンクを開く（バックグラウンド廃止）
+    function openLink(url, overrideMode) {
+      const mode = (overrideMode && overrideMode !== 'default') ? overrideMode : settingLinkOpenMode.value;
       if (mode === 'self') window.location.href = url;
-      else if (mode === 'background') { const newWindow = window.open(url, '_blank', 'noopener,noreferrer'); if (newWindow) newWindow.blur(); window.focus(); } 
       else window.open(url, '_blank', 'noopener,noreferrer');
     }
 
     /* =========================================================
-       2. 🌟 編集モード管理 (Read Only Toggle)
+       2. 🌟 編集モード管理
        ========================================================= */
     let isEditMode = localStorage.getItem('edit_mode') !== 'false';
     const navEditToggle = document.getElementById('nav-edit-toggle');
@@ -488,295 +480,434 @@
       if (isEditMode) {
         document.body.classList.remove('read-only-mode');
         iconEditOn.style.display = 'block'; iconEditOff.style.display = 'none';
-        labelEditToggle.textContent = '編集：オン';
-        navEditToggle.classList.add('active');
+        labelEditToggle.textContent = '編集中'; navEditToggle.classList.add('active');
       } else {
         document.body.classList.add('read-only-mode');
         iconEditOn.style.display = 'none'; iconEditOff.style.display = 'block';
-        labelEditToggle.textContent = '編集：オフ';
-        navEditToggle.classList.remove('active');
+        labelEditToggle.textContent = '表示のみ'; navEditToggle.classList.remove('active');
       }
       localStorage.setItem('edit_mode', isEditMode);
     };
     updateEditMode();
-    navEditToggle.addEventListener('click', () => { isEditMode = !isEditMode; updateEditMode(); });
-
+    navEditToggle.addEventListener('click', () => { isEditMode = !isEditMode; updateEditMode(); renderSearchEngines(); renderBottomSheet(); });
 
     /* =========================================================
-       3. 画面切り替えロジック
+       3. 設定モーダルの制御 (操作したらパッと閉じる)
        ========================================================= */
-    const views = { search: document.getElementById('view-search'), settings: document.getElementById('view-settings') };
-    const headerSettingsBtn = document.getElementById('headerSettingsBtn');
-    const bottomNav = document.querySelector('.bottom-nav');
-
-    function switchView(targetName) {
-      Object.values(views).forEach(view => view.classList.remove('active'));
-      if (targetName === 'settings') {
-        views.settings.classList.add('active'); 
-        bottomNav.classList.add('force-show'); 
-      } else {
-        views.search.classList.add('active'); 
-        bottomNav.classList.remove('force-show');
-        setTimeout(() => document.getElementById('searchInput').focus(), 100);
-      }
-    }
+    const settingsModal = document.getElementById('settingsModal');
     
-    headerSettingsBtn.addEventListener('click', () => switchView('settings'));
-    document.getElementById('settingsCloseBtn').addEventListener('click', () => switchView('search'));
+    function openSettingsModal() { settingsModal.style.display = 'flex'; setTimeout(() => settingsModal.classList.add('show'), 10); }
+    function closeSettingsModal() { settingsModal.classList.remove('show'); setTimeout(() => settingsModal.style.display = 'none', 200); }
+    
+    document.getElementById('nav-settings-btn').addEventListener('click', openSettingsModal);
+    document.getElementById('settingsCloseBtn').addEventListener('click', closeSettingsModal);
+    settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) closeSettingsModal(); });
+
+    // 設定を変更したらモーダルを閉じる
+    settingLinkOpenMode.addEventListener('change', (e) => { localStorage.setItem('link_open_mode', e.target.value); closeSettingsModal(); });
+    const settingSaveHistory = document.getElementById('settingSaveHistory');
+    if (localStorage.getItem('save_history_pref') !== null) settingSaveHistory.checked = localStorage.getItem('save_history_pref') === 'true'; 
+    settingSaveHistory.addEventListener('change', (e) => { localStorage.setItem('save_history_pref', e.target.checked); closeSettingsModal(); });
 
     /* =========================================================
-       4. 汎用モーダル (入力画面)
+       4. ボトムシート (フォルダ選択) の制御
+       ========================================================= */
+    const sheetOverlay = document.getElementById('folderBottomSheet');
+    function openBottomSheet() { sheetOverlay.style.display = 'block'; renderBottomSheet(); }
+    function closeBottomSheet() { sheetOverlay.style.display = 'none'; }
+    document.getElementById('nav-folder-select').addEventListener('click', openBottomSheet);
+    sheetOverlay.addEventListener('click', (e) => { if(e.target === sheetOverlay) closeBottomSheet(); });
+
+    /* =========================================================
+       5. 汎用入力モーダル
        ========================================================= */
     let modalCallback = null;
-    const modalOverlay = document.getElementById('customModal'); const modalTitle = document.getElementById('modalTitle');
-    const modalInput1 = document.getElementById('modalInput1'); const modalInput2 = document.getElementById('modalInput2'); const modalInput3 = document.getElementById('modalInput3');
-    const modalSaveBtn = document.getElementById('modalSaveBtn');
+    const inputModalOverlay = document.getElementById('customModal'); const modalTitle = document.getElementById('modalTitle');
+    const modalInput1 = document.getElementById('modalInput1'); const modalInput2 = document.getElementById('modalInput2'); 
+    const modalInput3 = document.getElementById('modalInput3'); const modalOpenMode = document.getElementById('modalOpenMode');
+    const modalFolderSelect = document.getElementById('modalFolderSelect');
+    
+    function openInputModal(options) {
+      modalTitle.textContent = options.title;
+      modalInput1.value = options.val1 || ""; modalInput1.placeholder = options.showUrl ? "名前を入力" : "フォルダ名を入力";
+      
+      if (options.showUrl) { modalInput2.value = options.val2 || ""; modalInput2.placeholder = "検索URL"; modalInput2.style.display = 'block'; } else { modalInput2.style.display = 'none'; }
+      if (options.showIconInput) { modalInput3.value = options.val3 || ""; modalInput3.style.display = 'block'; } else { modalInput3.style.display = 'none'; }
+      if (options.showOpenMode) { modalOpenMode.value = options.openModeVal || 'default'; modalOpenMode.style.display = 'block'; } else { modalOpenMode.style.display = 'none'; }
+      
+      // フォルダ移動セレクト
+      if (options.showFolderSelect) {
+        modalFolderSelect.innerHTML = '';
+        searchEnginesData.forEach((f, i) => {
+          const opt = document.createElement('option');
+          opt.value = i; opt.textContent = `フォルダ：${f.folderName}`;
+          if (i === options.folderIndex) opt.selected = true;
+          modalFolderSelect.appendChild(opt);
+        });
+        modalFolderSelect.style.display = 'block';
+      } else {
+        modalFolderSelect.style.display = 'none';
+      }
 
-    function openModal(title, val1, val2, val3, showUrl, urlPlaceholder, showIconInput, callback) {
-      modalTitle.textContent = title;
-      modalInput1.value = val1; modalInput1.placeholder = (showUrl || title.includes("見出し")) ? "名前を入力" : "フォルダ名を入力";
-      if (showUrl) { modalInput2.value = val2; modalInput2.placeholder = urlPlaceholder; modalInput2.style.display = 'block'; } else { modalInput2.style.display = 'none'; }
-      if (showIconInput) { modalInput3.value = val3 || ""; modalInput3.style.display = 'block'; } else { modalInput3.style.display = 'none'; }
-      modalCallback = callback; modalOverlay.style.display = 'flex';
-      setTimeout(() => modalOverlay.classList.add('show'), 10);
+      modalCallback = options.callback; 
+      inputModalOverlay.style.display = 'flex'; setTimeout(() => inputModalOverlay.classList.add('show'), 10);
       modalInput1.focus();
     }
-    function closeModal() { modalOverlay.classList.remove('show'); setTimeout(() => modalOverlay.style.display = 'none', 200); }
-    document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
-    modalSaveBtn.addEventListener('click', () => { if (modalCallback) modalCallback(modalInput1.value, modalInput2.value, modalInput3.value); closeModal(); });
-    const handleEnter = (e) => { if (e.key === 'Enter') { if (e.isComposing) return; e.preventDefault(); modalSaveBtn.click(); } };
-    modalInput1.addEventListener('keydown', handleEnter); modalInput2.addEventListener('keydown', handleEnter); modalInput3.addEventListener('keydown', handleEnter);
+    function closeInputModal() { inputModalOverlay.classList.remove('show'); setTimeout(() => inputModalOverlay.style.display = 'none', 200); }
+    document.getElementById('modalCancelBtn').addEventListener('click', closeInputModal);
+    document.getElementById('modalSaveBtn').addEventListener('click', () => { 
+      if (modalCallback) modalCallback(modalInput1.value, modalInput2.value, modalInput3.value, modalOpenMode.value, parseInt(modalFolderSelect.value)); 
+      closeInputModal(); 
+    });
 
     /* =========================================================
-       5. フルデータセットの初期化
+       6. データ初期化 & スロット管理
        ========================================================= */
-    const getDomain = (url) => { try { return new URL(url).hostname; } catch(e){ return ""; } };
-
     const defaultSearchEnginesData = [
-      { folderName: "ウェブ", engines: [ { isHeading: true, name: "ポータル" }, { name: "Google", url: "https://www.google.com/search?q=", home: "https://www.google.com", domain: "google.com", iconUrl: "" }, { name: "Yahoo! JAPAN", url: "https://search.yahoo.co.jp/search?p=", home: "https://www.yahoo.co.jp", domain: "yahoo.co.jp", iconUrl: "" }, { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=", home: "https://duckduckgo.com", domain: "duckduckgo.com", iconUrl: "" }, { name: "Bing", url: "https://www.bing.com/search?q=", home: "https://www.bing.com", domain: "bing.com", iconUrl: "" }, { isHeading: true, name: "動画／画像" }, { name: "YouTube", url: "https://www.youtube.com/results?search_query=", home: "https://www.youtube.com", domain: "youtube.com", iconUrl: "" }, { name: "画像検索", url: "https://www.google.com/search?tbm=isch&q=", home: "https://www.google.com/imghp", domain: "google.com", iconUrl: "" }, { isHeading: true, name: "SNS" }, { name: "リアルタイム", url: "https://search.yahoo.co.jp/realtime/search?p=", home: "https://search.yahoo.co.jp/realtime", domain: "yahoo.co.jp", iconUrl: "" }, { name: "X", url: "https://twitter.com/search?q=", home: "https://twitter.com", domain: "twitter.com", iconUrl: "" }, { name: "Instagram", url: "https://www.instagram.com/explore/tags/", home: "https://www.instagram.com", domain: "instagram.com", iconUrl: "" }, { isHeading: true, name: "辞書" }, { name: "Wikipedia", url: "https://ja.wikipedia.org/wiki/Special:Search?search=", home: "https://ja.wikipedia.org", domain: "wikipedia.org", iconUrl: "" }, { name: "Weblio辞書", url: "https://www.weblio.jp/content/", home: "https://www.weblio.jp", domain: "weblio.jp", iconUrl: "" }, { name: "コトバンク", url: "https://kotobank.jp/word/", home: "https://kotobank.jp", domain: "kotobank.jp", iconUrl: "" }, { name: "英辞郎", url: "https://eow.alc.co.jp/search?q=", home: "https://eow.alc.co.jp", domain: "alc.co.jp", iconUrl: "" } ] },
-      { folderName: "ショッピング", engines: [ { isHeading: true, name: "総合通販" }, { name: "Amazon", url: "https://www.amazon.co.jp/s?k=", home: "https://www.amazon.co.jp", domain: "amazon.co.jp", iconUrl: "" }, { name: "楽天市場", url: "https://search.rakuten.co.jp/search/mall/", home: "https://www.rakuten.co.jp", domain: "rakuten.co.jp", iconUrl: "" }, { name: "Y!ショッピング", url: "https://shopping.yahoo.co.jp/search?p=", home: "https://shopping.yahoo.co.jp", domain: "shopping.yahoo.co.jp", iconUrl: "" }, { name: "ヨドバシ", url: "https://www.yodobashi.com/?word=", home: "https://www.yodobashi.com", domain: "yodobashi.com", iconUrl: "" }, { name: "モノタロウ", url: "https://www.monotaro.com/s/q-", home: "https://www.monotaro.com", domain: "monotaro.com", iconUrl: "" }, { isHeading: true, name: "フリマ／オークション" }, { name: "メルカリ", url: "https://jp.mercari.com/search?keyword=", home: "https://jp.mercari.com", domain: "mercari.com", iconUrl: "" }, { name: "ヤフオク!", url: "https://auctions.yahoo.co.jp/search/search?p=", home: "https://auctions.yahoo.co.jp", domain: "auctions.yahoo.co.jp", iconUrl: "" }, { name: "ヤフーフリマ", url: "https://paypayfleamarket.yahoo.co.jp/search/", home: "https://paypayfleamarket.yahoo.co.jp", domain: "paypayfleamarket.yahoo.co.jp", iconUrl: "" }, { name: "ラクマ", url: "https://fril.jp/search/", home: "https://fril.jp", domain: "fril.jp", iconUrl: "" }, { name: "ジモティー", url: "https://jmty.jp/all/search?keyword=", home: "https://jmty.jp", domain: "jmty.jp", iconUrl: "" }, { isHeading: true, name: "海外" }, { name: "Qoo10", url: "https://www.qoo10.jp/gmkt.inc/Search/Default.aspx?keyword=", home: "https://www.qoo10.jp", domain: "qoo10.jp", iconUrl: "" }, { name: "Temu", url: "https://www.temu.com/search_result.html?search_key=", home: "https://www.temu.com", domain: "www.temu.com", iconUrl: "" }, { isHeading: true, name: "ハンドメイド" }, { name: "minnne", url: "https://minne.com/category/saleonly?input_method=typing&q=", home: "https://minne.com", domain: "minne.com", iconUrl: "" }, { name: "Creema", url: "https://www.creema.jp/listing?active=pc_home-leftside&mode=keyword&q=", home: "https://www.creema.jp", domain: "www.creema.jp", iconUrl: "" }, { isHeading: true, name: "価格比較" }, { name: "価格.com", url: "https://kakaku.com/search_results/?query=", home: "https://kakaku.com", domain: "kakaku.com", iconUrl: "" } ] },
-      { folderName: "お店", engines: [ { isHeading: true, name: "ファッション" }, { name: "ユニクロ", url: "https://www.uniqlo.com/jp/ja/search?q=", home: "https://www.uniqlo.com", domain: "www.uniqlo.com", iconUrl: "" }, { name: "ZOZOTOWN", url: "https://zozo.jp/search/?p_keyv=", home: "https://zozo.jp", domain: "zozo.jp", iconUrl: "" }, { isHeading: true, name: "100均" }, { name: "ダイソー", url: "https://jp.daisonet.com/search?type=product&q=", home: "https://jp.daisonet.com", domain: "jp.daisonet.com", iconUrl: "" }, { name: "無印良品", url: "https://www.muji.com/jp/ja/store/search/cmdty/", home: "https://www.muji.com", domain: "www.muji.com", iconUrl: "" }, { name: "ニトリ", url: "https://www.nitori-net.jp/ec/search/?q=", home: "https://www.nitori-net.jp", domain: "www.nitori-net.jp", iconUrl: "" }, { isHeading: true, name: "本" }, { name: "bookoff", url: "https://shopping.bookoff.co.jp/search/keyword/", home: "https://shopping.bookoff.co.jp", domain: "shopping.bookoff.co.jp", iconUrl: "" }, { name: "ビックカメラ", url: "https://www.biccamera.com/bc/category/?q=", home: "https://www.biccamera.com", domain: "biccamera.com", iconUrl: "" }, { name: "コストコ", url: "https://www.costco.co.jp/search?text=", home: "https://www.costco.co.jp", domain: "www.costco.co.jp", iconUrl: "" } ] },
-      { folderName: "地図・グルメ", engines: [ { isHeading: true, name: "地図" }, { name: "Google MAP", url: "https://www.google.com/maps/search/", home: "https://www.google.com/maps", domain: "google.com", iconUrl: "" }, { isHeading: true, name: "旅行" }, { name: "じゃらん", url: "https://www.jalan.net/uw/uwp2011/uww2011init.do?keyword=", home: "https://www.jalan.net", domain: "www.jalan.net", iconUrl: "" }, { name: "楽天トラベル", url: "https://kw.travel.rakuten.co.jp/keyword/Search.do?charset=utf-8&f_max=30&l-id=topC_search_keyword&f_query=", home: "https://kw.travel.rakuten.co.jp", domain: "kw.travel.rakuten.co.jp", iconUrl: "" }, { isHeading: true, name: "グルメ" }, { name: "食べログ", url: "https://tabelog.com/rstLst/?sw=", home: "https://tabelog.com", domain: "tabelog.com", iconUrl: "" }, { name: "ぐるなび", url: "https://r.gnavi.co.jp/area/jp/rs/?fw=", home: "https://r.gnavi.co.jp", domain: "gnavi.co.jp", iconUrl: "" }, { name: "ホットペッパー", url: "https://www.hotpepper.jp/CSP/psh010/doSearch?freeWord=", home: "https://www.hotpepper.jp", domain: "hotpepper.jp", iconUrl: "" } ] },
-      { folderName: "エンタメ", engines: [ { isHeading: true, name: "動画" }, { name: "Youtube", url: "https://www.youtube.com/results?search_query=", home: "https://www.youtube.com", domain: "www.youtube.com", iconUrl: "" }, { name: "Prime Video", url: "https://www.amazon.co.jp/s?i=instant-video&k=", home: "https://www.amazon.co.jp/Prime-Video", domain: "amazon.co.jp", iconUrl: "" }, { name: "TVer", url: "https://tver.jp/search/", home: "https://tver.jp", domain: "tver.jp", iconUrl: "" }, { name: "abema", url: "https://abema.tv/search?q=", home: "https://abema.tv", domain: "abema.tv", iconUrl: "" }, { name: "Spotify", url: "https://open.spotify.com/search/", home: "https://open.spotify.com", domain: "spotify.com", iconUrl: "" }, { isHeading: true, name: "映画" }, { name: "映画.com", url: "https://eiga.com/search/", home: "https://eiga.com", domain: "eiga.com", iconUrl: "" }, { name: "Filmarks", url: "https://filmarks.com/search/movies?q=", home: "https://filmarks.com", domain: "filmarks.com", iconUrl: "" } ] },
-      { folderName: "レシピ", engines: [ { isHeading: true, name: "レシピ" }, { name: "クックパッド", url: "https://cookpad.com/search/", home: "https://cookpad.com", domain: "cookpad.com", iconUrl: "" }, { name: "クラシル", url: "https://www.kurashiru.com/search?query=", home: "https://www.kurashiru.com", domain: "kurashiru.com", iconUrl: "" }, { name: "ホームクッキング", url: "https://www.kikkoman.co.jp/homecook/search/select_search.html?kw=", home: "https://www.kikkoman.co.jp", domain: "www.kikkoman.co.jp", iconUrl: "" }, { name: "デリッシュ", url: "https://delishkitchen.tv/search?q=", home: "https://delishkitchen.tv", domain: "delishkitchen.tv", iconUrl: "" } ] },
-      { folderName: "素材", engines: [ { isHeading: true, name: "画像" }, { name: "unsplash", url: "https://unsplash.com/ja/s/%E5%86%99%E7%9C%9F/", home: "https://unsplash.com", domain: "unsplash.com", iconUrl: "" }, { name: "pixabay", url: "https://pixabay.com/ja/images/search/", home: "https://pixabay.com", domain: "pixabay.com", iconUrl: "" }, { isHeading: true, name: "音声" }, { name: "効果音", url: "https://soundeffect-lab.info/sound/search.php?s=", home: "https://soundeffect-lab.info", domain: "soundeffect-lab.info", iconUrl: "" }, { name: "freesound.org", url: "https://freesound.org/search/?q=", home: "https://freesound.org", domain: "freesound.org", iconUrl: "" } ] },
-      { folderName: "学術", engines: [ { name: "Google Scholar", url: "https://scholar.google.com/scholar?q=", home: "https://scholar.google.com", domain: "scholar.google.com", iconUrl: "" }, { name: "CiNii", url: "https://cir.nii.ac.jp/all?q=", home: "https://cir.nii.ac.jp", domain: "nii.ac.jp", iconUrl: "" } ] }
+      { folderName: "ウェブ", engines: [ { name: "Google", url: "https://www.google.com/search?q=", home: "https://www.google.com", domain: "google.com" }, { name: "Yahoo!", url: "https://search.yahoo.co.jp/search?p=", home: "https://www.yahoo.co.jp", domain: "yahoo.co.jp" }, { name: "DuckDuckGo", url: "https://duckduckgo.com/?q=", home: "https://duckduckgo.com", domain: "duckduckgo.com" }, { name: "YouTube", url: "https://www.youtube.com/results?search_query=", home: "https://www.youtube.com", domain: "youtube.com" }, { name: "画像検索", url: "https://www.google.com/search?tbm=isch&q=", home: "https://www.google.com/imghp", domain: "google.com" }, { name: "Wikipedia", url: "https://ja.wikipedia.org/wiki/Special:Search?search=", home: "https://ja.wikipedia.org", domain: "wikipedia.org" } ] },
+      { folderName: "ショッピング", engines: [ { name: "Amazon", url: "https://www.amazon.co.jp/s?k=", home: "https://www.amazon.co.jp", domain: "amazon.co.jp" }, { name: "楽天市場", url: "https://search.rakuten.co.jp/search/mall/", home: "https://www.rakuten.co.jp", domain: "rakuten.co.jp" }, { name: "メルカリ", url: "https://jp.mercari.com/search?keyword=", home: "https://jp.mercari.com", domain: "mercari.com" } ] },
+      { folderName: "マップ・地域", engines: [ { name: "Google MAP", url: "https://www.google.com/maps/search/", home: "https://www.google.com/maps", domain: "google.com" }, { name: "食べログ", url: "https://tabelog.com/rstLst/?sw=", home: "https://tabelog.com", domain: "tabelog.com" } ] }
     ];
+
     let searchEnginesData = JSON.parse(localStorage.getItem('search_engines_data')) || defaultSearchEnginesData;
+    let currentFolderIndex = 0;
+    
+    function ensureEmptySlots(folderIndex) {
+      const folder = searchEnginesData[folderIndex];
+      let emptyCount = 0;
+      for (let i = folder.engines.length - 1; i >= 0; i--) { if (folder.engines[i].isEmpty) emptyCount++; else break; }
+      const requiredEmpty = 3;
+      if (emptyCount < requiredEmpty) { for (let i = 0; i < (requiredEmpty - emptyCount); i++) folder.engines.push({ isEmpty: true }); }
+      while (folder.engines.length % 3 !== 0) folder.engines.push({ isEmpty: true });
+    }
+    searchEnginesData.forEach((folder, idx) => { folder.engines = folder.engines.filter(e => !e.isHeading); ensureEmptySlots(idx); });
     function saveSearchEngines() { localStorage.setItem('search_engines_data', JSON.stringify(searchEnginesData)); }
 
     /* =========================================================
-       6. 検索窓・履歴の処理
+       7. 検索窓・履歴
        ========================================================= */
-    const searchInput = document.getElementById('searchInput'); const clearBtn = document.getElementById('clearBtn'); const historyBtn = document.getElementById('historyBtn'); const historyPopup = document.getElementById('historyPopup'); const settingSaveHistory = document.getElementById('settingSaveHistory'); const HISTORY_KEY = 'search_history'; let searchHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
-    if (localStorage.getItem('save_history_pref') !== null) settingSaveHistory.checked = localStorage.getItem('save_history_pref') === 'true'; settingSaveHistory.addEventListener('change', (e) => localStorage.setItem('save_history_pref', e.target.checked));
-    const toggleClearBtn = () => clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none'; searchInput.addEventListener('input', toggleClearBtn); clearBtn.addEventListener('click', () => { searchInput.value = ''; toggleClearBtn(); searchInput.focus(); });
-    const renderHistory = () => { historyPopup.innerHTML = ''; if (searchHistory.length === 0) { historyPopup.innerHTML = '<div class="history-empty">検索履歴はありません</div>'; return; } searchHistory.forEach((keyword, index) => { const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<svg class="history-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><div class="history-text">${keyword}</div><div class="history-delete"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div>`; item.querySelector('.history-delete').addEventListener('click', (e) => { e.stopPropagation(); searchHistory.splice(index, 1); localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory)); renderHistory(); }); item.addEventListener('click', () => { searchInput.value = keyword; toggleClearBtn(); historyPopup.style.display = 'none'; }); historyPopup.appendChild(item); }); };
-    historyBtn.addEventListener('click', (e) => { e.stopPropagation(); if (historyPopup.style.display === 'block') historyPopup.style.display = 'none'; else { renderHistory(); historyPopup.style.display = 'block'; } }); document.addEventListener('click', (e) => { if (!historyPopup.contains(e.target) && e.target !== historyBtn && !historyBtn.contains(e.target)) historyPopup.style.display = 'none'; });
+    const searchInput = document.getElementById('searchInput'); const clearBtn = document.getElementById('clearBtn'); const historyBtn = document.getElementById('historyBtn'); const historyPopup = document.getElementById('historyPopup'); const HISTORY_KEY = 'search_history'; let searchHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
     
-    const executeSearch = (url, home) => { 
+    const toggleClearBtn = () => clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none'; searchInput.addEventListener('input', toggleClearBtn); clearBtn.addEventListener('click', () => { searchInput.value = ''; toggleClearBtn(); searchInput.focus(); });
+    
+    const executeSearch = (url, home, overrideMode) => { 
       const query = searchInput.value.trim(); 
       if (query) { 
         if (settingSaveHistory.checked) { searchHistory = searchHistory.filter(k => k !== query); searchHistory.unshift(query); if (searchHistory.length > 20) searchHistory.pop(); localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory)); } 
-        openLink(url + encodeURIComponent(query)); 
-      } else { openLink(home); } 
+        openLink(url + encodeURIComponent(query), overrideMode); 
+      } else { openLink(home, overrideMode); } 
       searchInput.blur(); historyPopup.style.display = 'none'; 
     };
-    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { 
-      const firstEngine = searchEnginesData[0]?.engines.find(eng => !eng.isHeading);
-      if (firstEngine) executeSearch(firstEngine.url, firstEngine.home); 
-    } });
+    searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') { const firstEngine = searchEnginesData[currentFolderIndex]?.engines.find(eng => !eng.isEmpty); if (firstEngine) executeSearch(firstEngine.url, firstEngine.home, firstEngine.openMode); } });
+
+    historyBtn.addEventListener('click', (e) => { e.stopPropagation(); if (historyPopup.style.display === 'block') historyPopup.style.display = 'none'; else { historyPopup.innerHTML = ''; if (searchHistory.length === 0) { historyPopup.innerHTML = '<div style="padding: 24px; text-align: center; color: var(--text-sub);">履歴なし</div>'; } else { searchHistory.forEach((keyword, index) => { const item = document.createElement('div'); item.className = 'history-item'; item.innerHTML = `<svg class="history-icon" viewBox="0 0 24 24"><path d="M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67z"/></svg><div class="history-text">${keyword}</div><div class="history-delete"><svg viewBox="0 0 24 24" width="16" height="16"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg></div>`; item.querySelector('.history-delete').addEventListener('click', (e) => { e.stopPropagation(); searchHistory.splice(index, 1); localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory)); historyBtn.click(); historyBtn.click(); }); item.addEventListener('click', () => { searchInput.value = keyword; toggleClearBtn(); historyPopup.style.display = 'none'; }); historyPopup.appendChild(item); }); } historyPopup.style.display = 'block'; } });
+    document.addEventListener('click', (e) => { if (!historyPopup.contains(e.target) && e.target !== historyBtn) historyPopup.style.display = 'none'; });
 
     /* =========================================================
-       7. コンテキストメニュー表示処理 (編集モード対応)
+       8. フォルダの選択ボトムシート (アニメーションなしでパッと切り替え)
        ========================================================= */
-    function showContextMenu(e, type, target) {
-      if (!isEditMode) return; // 編集モードオフ時は何もしない
+    const sheetFolderList = document.getElementById('sheetFolderList');
+    
+    function renderBottomSheet() {
+      sheetFolderList.innerHTML = '';
       
-      window.currentContextTarget = target; window.currentContextType = type;
-      const menu = document.getElementById('contextMenu');
-      document.querySelectorAll('.menu-item, .menu-divider').forEach(el => el.style.display = 'none');
-      
-      if (type === 'search-engine') { document.querySelectorAll('.menu-type-edit, .menu-type-copy').forEach(el => el.style.display = 'flex'); }
-      else if (type === 'search-folder') { document.querySelectorAll('.menu-type-folder').forEach(el => el.style.display = 'flex'); }
-      else if (type === 'search-heading') { document.querySelectorAll('.menu-type-edit').forEach(el => el.style.display = 'flex'); }
-      
-      menu.style.display = 'block';
-      let x = e.clientX, y = e.clientY;
-      if (x + menu.offsetWidth > window.innerWidth) x -= menu.offsetWidth;
-      if (y + menu.offsetHeight > window.innerHeight) y -= menu.offsetHeight;
-      menu.style.left = `${x}px`; menu.style.top = `${y}px`;
-    }
-    document.addEventListener('click', (e) => { if (e.button !== 2) document.getElementById('contextMenu').style.display = 'none'; });
-
-    /* =========================================================
-       8. 検索画面の描画 & D&D
-       ========================================================= */
-    const searchTabs = document.getElementById('searchTabsContainer'); const searchSlider = document.getElementById('searchSliderContainer');
-    let draggedSearch = null; let draggedSearchTab = null;
-    const searchObserver = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting && views.search.classList.contains('active')) { searchTabs.querySelectorAll('.tab').forEach(t => t.classList.remove('active')); const idx = entry.target.id.split('-')[2]; const activeTab = searchTabs.querySelector(`.tab[data-index="${idx}"]`); if (activeTab) { activeTab.classList.add('active'); activeTab.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' }); } } }); }, { root: searchSlider, rootMargin: '0px', threshold: 0.6 });
-
-    const updateSearchData = () => {
-      const allFolders = document.querySelectorAll('#searchSliderContainer .folder');
-      allFolders.forEach((fDiv, fIdx) => {
-        const elements = Array.from(fDiv.querySelectorAll('.engine-grid > *:not(.add-engine-btn):not(.add-heading-btn)'));
-        searchEnginesData[fIdx].engines = elements.map(el => {
-          if (el.classList.contains('section-heading')) return { isHeading: true, name: el.dataset.name };
-          return { name: el.dataset.name, url: el.dataset.url, home: el.dataset.home, domain: el.dataset.domain, iconUrl: el.dataset.iconUrl };
-        });
-      });
-      saveSearchEngines(); renderSearchEngines();
-    };
-
-    function renderSearchEngines() {
-      searchTabs.innerHTML = ''; searchSlider.innerHTML = ''; searchObserver.disconnect();
       searchEnginesData.forEach((folder, index) => {
-        const tab = document.createElement('div'); tab.className = `tab ${index === 0 ? 'active' : ''}`; tab.textContent = folder.folderName; tab.dataset.index = index; tab.setAttribute('draggable', 'true');
-        tab.addEventListener('click', () => { const slider = document.getElementById('searchSliderContainer'); slider.scrollLeft = slider.clientWidth * index; });
-        tab.addEventListener('dragstart', (e) => { if(!isEditMode) { e.preventDefault(); return; } draggedSearchTab = tab; setTimeout(() => tab.classList.add('dragging'), 0); });
-        tab.addEventListener('dragend', () => { if(!draggedSearchTab) return; draggedSearchTab.classList.remove('dragging'); const currentTabs = Array.from(searchTabs.querySelectorAll('.tab:not(.add-folder-btn)')); searchEnginesData = currentTabs.map(t => searchEnginesData[parseInt(t.dataset.index)]); saveSearchEngines(); renderSearchEngines(); draggedSearchTab = null; });
-        tab.addEventListener('dragover', e => { e.preventDefault(); if (draggedSearchTab && draggedSearchTab !== tab) { const rect = tab.getBoundingClientRect(); if (e.clientX < rect.left + rect.width / 2) searchTabs.insertBefore(draggedSearchTab, tab); else searchTabs.insertBefore(draggedSearchTab, tab.nextSibling); } else if (draggedSearch) { tab.classList.add('drag-over'); } });
-        tab.addEventListener('dragleave', () => tab.classList.remove('drag-over'));
-        tab.addEventListener('drop', e => { e.preventDefault(); tab.classList.remove('drag-over'); if (draggedSearch) { const targetGrid = document.querySelector(`#search-folder-${index} .engine-grid`); targetGrid.insertBefore(draggedSearch, targetGrid.querySelector('.add-engine-btn')); } });
-        tab.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e, 'search-folder', tab); });
-        searchTabs.appendChild(tab);
+        const item = document.createElement('div');
+        item.className = `sheet-item ${index === currentFolderIndex ? 'active' : ''}`;
+        item.innerHTML = `
+          <div class="sheet-item-name">${folder.folderName}</div>
+          <svg class="sheet-item-check" viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>
+        `;
+        
+        item.addEventListener('click', (e) => {
+          if (e.button === 2) return;
+          const slider = document.getElementById('searchSliderContainer');
+          // CSSクラスで一時的に smooth スクロールを解除してパッと切り替える
+          slider.classList.add('no-smooth');
+          slider.scrollLeft = slider.clientWidth * index;
+          setTimeout(() => slider.classList.remove('no-smooth'), 50);
+          closeBottomSheet();
+        });
+        sheetFolderList.appendChild(item);
+      });
+    }
 
-        const folderDiv = document.createElement('div'); folderDiv.className = 'folder'; folderDiv.id = `search-folder-${index}`;
-        const gridDiv = document.createElement('div'); gridDiv.className = 'engine-grid';
-        gridDiv.addEventListener('dragover', e => { 
-          e.preventDefault(); 
-          const target = e.target.closest('.card, .section-heading, .add-heading-btn'); 
-          if (target && target !== draggedSearch && !draggedSearchTab) { 
-            if (target.classList.contains('add-engine-btn') || target.classList.contains('add-heading-btn')) {
-              gridDiv.insertBefore(draggedSearch, gridDiv.querySelector('.add-engine-btn'));
-            } else {
-              const rect = target.getBoundingClientRect(); 
-              if (target.classList.contains('section-heading')) {
-                if (e.clientY < rect.top + rect.height / 2) gridDiv.insertBefore(draggedSearch, target); 
-                else gridDiv.insertBefore(draggedSearch, target.nextSibling); 
-              } else {
-                if (e.clientX < rect.left + rect.width / 2) gridDiv.insertBefore(draggedSearch, target); 
-                else gridDiv.insertBefore(draggedSearch, target.nextSibling); 
+    /* =========================================================
+       9. 📂 フォルダの管理モーダル (並び替え・追加・削除・名前変更)
+       ========================================================= */
+    const folderManageModal = document.getElementById('folderManageModal');
+    
+    document.getElementById('openFolderManageBtn').addEventListener('click', () => {
+      closeSettingsModal();
+      setTimeout(() => { folderManageModal.style.display = 'flex'; setTimeout(() => folderManageModal.classList.add('show'), 10); renderFolderManageList(); }, 250);
+    });
+    
+    document.getElementById('closeFolderManageBtn').addEventListener('click', () => {
+      folderManageModal.classList.remove('show'); setTimeout(() => folderManageModal.style.display = 'none', 200);
+    });
+    
+    function renderFolderManageList() {
+      const list = document.getElementById('folderManageList');
+      list.innerHTML = '';
+      searchEnginesData.forEach((folder, index) => {
+        const item = document.createElement('div');
+        item.className = 'folder-manage-item';
+        item.dataset.index = index;
+        item.innerHTML = `
+          <div class="drag-handle">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M3 15h18v-2H3v2zm0 4h18v-2H3v2zm0-8h18V9H3v2zm0-6v2h18V5H3z"/></svg>
+          </div>
+          <div class="folder-name">${folder.folderName}</div>
+          <div class="delete-btn">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zm2.46-7.12l1.41-1.41L12 12.59l2.12-2.12 1.41 1.41L13.41 14l2.12 2.12-1.41 1.41L12 15.41l-2.12 2.12-1.41-1.41L10.59 14l-2.12-2.12zM15.5 4l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+          </div>
+        `;
+        
+        // 名前変更
+        item.querySelector('.folder-name').addEventListener('click', () => {
+          openInputModal({
+            title: "フォルダ名を変更", val1: folder.folderName, 
+            callback: (name) => {
+              if(name && name.trim()) {
+                folder.folderName = name.trim();
+                saveSearchEngines(); renderSearchEngines(); renderFolderManageList();
               }
             }
-          } 
+          });
         });
-
-        folder.engines.forEach((engine, engIndex) => {
-          if (engine.isHeading) {
-            const heading = document.createElement('div'); heading.className = 'section-heading'; heading.textContent = engine.name;
-            heading.dataset.name = engine.name; heading.dataset.folderIndex = index; heading.dataset.itemIndex = engIndex; heading.setAttribute('draggable', 'true');
-            heading.addEventListener('dragstart', (e) => { if(!isEditMode) { e.preventDefault(); return; } draggedSearch = heading; setTimeout(() => heading.classList.add('dragging'), 0); });
-            heading.addEventListener('dragend', () => { if(!draggedSearch) return; draggedSearch.classList.remove('dragging'); updateSearchData(); draggedSearch = null; });
-            heading.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e, 'search-heading', heading); });
-            gridDiv.appendChild(heading);
-          } else {
-            const btn = document.createElement('div'); btn.className = 'card'; btn.dataset.name = engine.name; btn.dataset.url = engine.url; btn.dataset.home = engine.home; btn.dataset.domain = engine.domain; btn.dataset.iconUrl = engine.iconUrl || ""; btn.dataset.folderIndex = index; btn.dataset.itemIndex = engIndex; btn.setAttribute('draggable', 'true');
-            btn.addEventListener('click', (e) => { if (e.metaKey || e.ctrlKey) return; executeSearch(engine.url, engine.home); });
-            btn.addEventListener('dragstart', (e) => { if(!isEditMode) { e.preventDefault(); return; } draggedSearch = btn; setTimeout(() => btn.classList.add('dragging'), 0); });
-            btn.addEventListener('dragend', () => { if(!draggedSearch) return; draggedSearch.classList.remove('dragging'); updateSearchData(); draggedSearch = null; });
-            btn.addEventListener('contextmenu', (e) => { e.preventDefault(); showContextMenu(e, 'search-engine', btn); });
-            
-            let engineIconHtml = engine.iconUrl ? `<img src="${engine.iconUrl}" onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=${engine.domain}&sz=256';" alt="${engine.name}">` : `<img src="https://www.google.com/s2/favicons?domain=${engine.domain}&sz=256" alt="${engine.name}">`;
-            btn.innerHTML = `<div class="card-icon">${engineIconHtml}</div><div class="card-title">${engine.name}</div>`;
-            gridDiv.appendChild(btn);
+        
+        // 削除
+        item.querySelector('.delete-btn').addEventListener('click', () => {
+          if(searchEnginesData.length <= 1) { alert("最後のフォルダは削除できません。"); return; }
+          if(confirm(`フォルダ「${folder.folderName}」を削除しますか？`)) {
+            searchEnginesData.splice(index, 1);
+            if(currentFolderIndex >= searchEnginesData.length) currentFolderIndex = searchEnginesData.length - 1;
+            saveSearchEngines(); renderSearchEngines(); renderFolderManageList();
           }
         });
 
-        const addBtn = document.createElement('div'); addBtn.className = 'card add-engine-btn'; 
-        addBtn.innerHTML = `<div class="card-icon"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div><div class="card-title" style="color:var(--text-sub);">追加</div>`;
-        addBtn.addEventListener('click', (e) => { e.preventDefault(); openModal("検索エンジンを追加", "", "", "", true, "検索URL (例: https://google.com/search?q=)", true, (name, url, iconUrl) => { if (!url || !name) return; if (!url.startsWith('http')) url = 'https://' + url; try { const urlObj = new URL(url); searchEnginesData[index].engines.push({ name: name, url: url, home: urlObj.origin, domain: urlObj.hostname, iconUrl: iconUrl }); saveSearchEngines(); renderSearchEngines(); } catch(err) { alert("正しいURLを入力してください"); } }); });
-        gridDiv.appendChild(addBtn); 
+        list.appendChild(item);
+      });
+      setupFolderDrag();
+    }
 
-        const addHeadingBtn = document.createElement('div'); addHeadingBtn.className = 'add-heading-btn';
-        addHeadingBtn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>小見出しを追加`;
-        addHeadingBtn.addEventListener('click', () => {
-          openModal("小見出しを追加", "", "", "", false, "", false, (name) => {
-            if (name && name.trim()) { searchEnginesData[index].engines.push({ isHeading: true, name: name.trim() }); saveSearchEngines(); renderSearchEngines(); }
+    document.getElementById('addFolderBtnInManage').addEventListener('click', () => {
+      openInputModal({
+        title: "新しいフォルダを作成", val1: "",
+        callback: (name) => {
+          if(name && name.trim()) {
+            searchEnginesData.push({ folderName: name.trim(), engines: [] });
+            ensureEmptySlots(searchEnginesData.length - 1);
+            saveSearchEngines(); renderSearchEngines(); renderFolderManageList();
+            const slider = document.getElementById('searchSliderContainer'); 
+            setTimeout(() => { slider.scrollLeft = slider.scrollWidth; }, 100); 
+          }
+        }
+      });
+    });
+
+    // フォルダのタッチ＆ドラッグ並び替え
+    let draggingFolderItem = null;
+    let folderDragStartIndex = -1;
+    function setupFolderDrag() {
+      const list = document.getElementById('folderManageList');
+      let currentY = 0;
+      
+      list.addEventListener('touchstart', (e) => {
+        const handle = e.target.closest('.drag-handle');
+        if (!handle) return;
+        e.stopPropagation();
+        
+        draggingFolderItem = handle.closest('.folder-manage-item');
+        folderDragStartIndex = Array.from(list.children).indexOf(draggingFolderItem);
+        draggingFolderItem.classList.add('dragging');
+      }, {passive: false});
+
+      list.addEventListener('touchmove', (e) => {
+        if (!draggingFolderItem) return;
+        e.preventDefault(); // スクロール防止
+        currentY = e.touches[0].clientY;
+        
+        const overItem = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY)?.closest('.folder-manage-item');
+        if (overItem && overItem !== draggingFolderItem) {
+          const rect = overItem.getBoundingClientRect();
+          const next = (currentY - rect.top) / (rect.height) > 0.5;
+          list.insertBefore(draggingFolderItem, next ? overItem.nextSibling : overItem);
+        }
+      }, {passive: false});
+
+      list.addEventListener('touchend', (e) => {
+        if (!draggingFolderItem) return;
+        draggingFolderItem.classList.remove('dragging');
+        
+        const newIndex = Array.from(list.children).indexOf(draggingFolderItem);
+        if (folderDragStartIndex !== newIndex) {
+          const moved = searchEnginesData.splice(folderDragStartIndex, 1)[0];
+          searchEnginesData.splice(newIndex, 0, moved);
+          saveSearchEngines(); renderSearchEngines();
+          // 表示位置の補正
+          if(currentFolderIndex === folderDragStartIndex) currentFolderIndex = newIndex;
+        }
+        draggingFolderItem = null;
+      });
+    }
+
+    /* =========================================================
+       10. メインスライダー (アイコン一覧) 描画 & スマホドラッグ & HUD
+       ========================================================= */
+    const searchSlider = document.getElementById('searchSliderContainer');
+    let touchClone = null; let touchTarget = null; let touchOverSlot = null;
+    let hudTimeout; let isFirstLoad = true;
+
+    function showFolderHud(text) {
+      const hud = document.getElementById('folderHud');
+      hud.textContent = text; hud.classList.add('show');
+      clearTimeout(hudTimeout); hudTimeout = setTimeout(() => { hud.classList.remove('show'); }, 1500);
+    }
+
+    const searchObserver = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting && entry.intersectionRatio > 0.5) {
+          const newIndex = parseInt(entry.target.dataset.index);
+          if (currentFolderIndex !== newIndex || isFirstLoad) {
+            currentFolderIndex = newIndex;
+            if (!isFirstLoad) showFolderHud(searchEnginesData[currentFolderIndex].folderName);
+            if(sheetOverlay.style.display === 'block') renderBottomSheet();
+          }
+        }
+      });
+      isFirstLoad = false;
+    }, { root: searchSlider, threshold: 0.6 });
+
+    function renderSearchEngines() {
+      searchSlider.innerHTML = ''; searchObserver.disconnect();
+      
+      searchEnginesData.forEach((folder, index) => {
+        const folderDiv = document.createElement('div'); folderDiv.className = 'folder'; folderDiv.dataset.index = index;
+        const gridDiv = document.createElement('div'); gridDiv.className = 'engine-grid';
+        
+        folder.engines.forEach((engine, engIndex) => {
+          const btn = document.createElement('div');
+          btn.className = 'card' + (engine.isEmpty ? ' empty-slot' : '');
+          btn.dataset.folderIndex = index; btn.dataset.itemIndex = engIndex;
+          
+          if (engine.isEmpty) {
+            btn.innerHTML = `<div class="card-icon"><svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg></div><div class="card-title">追加</div>`;
+            btn.addEventListener('click', () => {
+              if (!isEditMode) return;
+              openInputModal({
+                title: "検索エンジンを追加", showUrl: true, showIconInput: true, showOpenMode: true,
+                callback: (name, url, iconUrl, openMode) => {
+                  if (!url || !name) return; if (!url.startsWith('http')) url = 'https://' + url; 
+                  try { const urlObj = new URL(url); searchEnginesData[index].engines[engIndex] = { name: name, url: url, home: urlObj.origin, domain: urlObj.hostname, iconUrl: iconUrl, openMode: openMode }; ensureEmptySlots(index); saveSearchEngines(); renderSearchEngines(); } catch(err) { alert("正しいURLを入力してください"); } 
+                }
+              });
+            });
+          } else {
+            let engineIconHtml = engine.iconUrl ? `<img src="${engine.iconUrl}" onerror="this.onerror=null; this.src='https://www.google.com/s2/favicons?domain=${engine.domain}&sz=256';" alt="${engine.name}">` : `<img src="https://www.google.com/s2/favicons?domain=${engine.domain}&sz=256" alt="${engine.name}">`;
+            btn.innerHTML = `<div class="card-icon">${engineIconHtml}</div><div class="card-title">${engine.name}</div>`;
+            btn.dataset.url = engine.url;
+            
+            // タップ時の挙動 (通常時は検索、編集モード時は設定)
+            btn.addEventListener('click', (e) => {
+              if (!isEditMode) {
+                if (e.metaKey || e.ctrlKey) return; executeSearch(engine.url, engine.home, engine.openMode);
+              } else {
+                // 編集モード時のタップ：個別設定（フォルダ移動含む）を開く
+                openInputModal({
+                  title: "アイコンの編集", val1: engine.name, val2: engine.url, val3: engine.iconUrl || "", openModeVal: engine.openMode || "default",
+                  showUrl: true, showIconInput: true, showOpenMode: true, showFolderSelect: true, folderIndex: index,
+                  callback: (name, url, icon, mode, targetFolderIdx) => {
+                    if (name) engine.name = name; 
+                    if (url) { if (!url.startsWith('http')) url = 'https://' + url; engine.url = url; try{ const u = new URL(url); engine.home = u.origin; engine.domain = u.hostname; }catch(err){} }
+                    engine.iconUrl = icon; engine.openMode = mode;
+                    
+                    // フォルダ移動処理
+                    if (targetFolderIdx !== index) {
+                      searchEnginesData[index].engines[engIndex] = { isEmpty: true };
+                      const emptySlotIdx = searchEnginesData[targetFolderIdx].engines.findIndex(e => e.isEmpty);
+                      if(emptySlotIdx !== -1) searchEnginesData[targetFolderIdx].engines[emptySlotIdx] = engine;
+                      else searchEnginesData[targetFolderIdx].engines.push(engine);
+                      ensureEmptySlots(index); ensureEmptySlots(targetFolderIdx);
+                    }
+                    saveSearchEngines(); renderSearchEngines();
+                  }
+                });
+              }
+            });
+          }
+
+          // スマホ向けタッチドラッグ (スワップ方式)
+          btn.addEventListener('touchstart', (e) => {
+            if (!isEditMode || e.touches.length > 1) return;
+            const touch = e.touches[0];
+            touchTarget = { btn, folderIndex: index, itemIndex: engIndex };
+            
+            const rect = btn.getBoundingClientRect();
+            touchClone = btn.cloneNode(true);
+            touchClone.style.position = 'fixed'; touchClone.style.left = rect.left + 'px'; touchClone.style.top = rect.top + 'px';
+            touchClone.style.width = rect.width + 'px'; touchClone.style.height = rect.height + 'px';
+            touchClone.style.opacity = '0.9'; touchClone.style.zIndex = '9999'; touchClone.style.pointerEvents = 'none';
+            touchClone.style.transform = 'scale(1.1)'; touchClone.style.transition = 'none';
+            touchClone.style.boxShadow = '0 10px 24px rgba(0,0,0,0.2)';
+            document.body.appendChild(touchClone);
+            
+            btn.style.opacity = '0.3';
+          }, {passive: false});
+
+          btn.addEventListener('touchmove', (e) => {
+            if (!touchClone || !isEditMode) return;
+            e.preventDefault();
+            const touch = e.touches[0];
+            touchClone.style.left = (touch.clientX - touchClone.offsetWidth / 2) + 'px';
+            touchClone.style.top = (touch.clientY - touchClone.offsetHeight / 2) + 'px';
+
+            const overEl = document.elementFromPoint(touch.clientX, touch.clientY);
+            const overCard = overEl ? overEl.closest('.card') : null;
+
+            if (touchOverSlot && touchOverSlot !== overCard) touchOverSlot.classList.remove('drag-over-slot');
+            if (overCard && overCard !== btn && parseInt(overCard.dataset.folderIndex) === index) {
+              overCard.classList.add('drag-over-slot');
+              touchOverSlot = overCard;
+            } else { touchOverSlot = null; }
+          }, {passive: false});
+
+          btn.addEventListener('touchend', (e) => {
+            if (!touchClone || !isEditMode) return;
+            touchClone.remove(); touchClone = null; btn.style.opacity = '1';
+
+            if (touchOverSlot) {
+              touchOverSlot.classList.remove('drag-over-slot');
+              const targetFolderIndex = parseInt(touchOverSlot.dataset.folderIndex);
+              const targetItemIndex = parseInt(touchOverSlot.dataset.itemIndex);
+
+              if (index === targetFolderIndex && engIndex !== targetItemIndex) {
+                const temp = searchEnginesData[index].engines[engIndex];
+                searchEnginesData[index].engines[engIndex] = searchEnginesData[index].engines[targetItemIndex];
+                searchEnginesData[index].engines[targetItemIndex] = temp;
+                ensureEmptySlots(index); saveSearchEngines(); renderSearchEngines();
+              }
+            }
+            touchTarget = null; touchOverSlot = null;
           });
+          
+          gridDiv.appendChild(btn);
         });
-        gridDiv.appendChild(addHeadingBtn);
 
         folderDiv.appendChild(gridDiv); searchSlider.appendChild(folderDiv); searchObserver.observe(folderDiv);
       });
-      const addFolderBtn = document.createElement('div'); addFolderBtn.className = 'tab add-folder-btn'; addFolderBtn.textContent = '＋ 追加'; addFolderBtn.title = '新しいフォルダを追加';
-      addFolderBtn.addEventListener('click', () => { openModal("検索フォルダを追加", "", "", "", false, "", false, (name) => { if (name && name.trim()) { searchEnginesData.push({ folderName: name.trim(), engines: [] }); saveSearchEngines(); renderSearchEngines(); setTimeout(() => { const slider = document.getElementById('searchSliderContainer'); slider.scrollLeft = slider.scrollWidth; }, 100); } }); });
-      searchTabs.appendChild(addFolderBtn);
     }
     renderSearchEngines();
 
     /* =========================================================
-       9. コンテキストメニュー 各種アクション
+       11. インポート・エクスポート・初期化
        ========================================================= */
-    document.getElementById('menuEdit').addEventListener('click', () => {
-      const target = window.currentContextTarget; const type = window.currentContextType;
-      if (!target) return;
-      if (type === 'search-engine') {
-        const eng = searchEnginesData[target.dataset.folderIndex].engines[target.dataset.itemIndex];
-        openModal("検索エンジンを編集", eng.name, eng.url, eng.iconUrl || "", true, "検索URL (例: https://google.com/search?q=)", true, (newName, newUrl, newIconUrl) => {
-          if (newName) eng.name = newName; 
-          if (newUrl) { if (!newUrl.startsWith('http')) newUrl = 'https://' + newUrl; eng.url = newUrl; try{ const u = new URL(newUrl); eng.home = u.origin; eng.domain = u.hostname; }catch(e){} }
-          eng.iconUrl = newIconUrl; saveSearchEngines(); renderSearchEngines();
-        });
-      } else if (type === 'search-heading') {
-        const eng = searchEnginesData[target.dataset.folderIndex].engines[target.dataset.itemIndex];
-        openModal("小見出しを編集", eng.name, "", "", false, "", false, (newName) => { if (newName) { eng.name = newName; saveSearchEngines(); renderSearchEngines(); } });
-      }
-      document.getElementById('contextMenu').style.display = 'none';
-    });
-
-    document.getElementById('menuCopy').addEventListener('click', () => { 
-      if (window.currentContextTarget) { navigator.clipboard.writeText(window.currentContextTarget.dataset.url).then(() => { const btn = document.getElementById('menuCopy'); const orig = btn.innerHTML; btn.innerHTML = `<svg viewBox="0 0 24 24"><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>Copied!`; setTimeout(() => btn.innerHTML = orig, 1500); }); } 
-    });
-    
-    document.getElementById('menuRemove').addEventListener('click', () => {
-      const target = window.currentContextTarget; const type = window.currentContextType;
-      if (target) {
-        target.style.transform = 'scale(0.8)'; target.style.opacity = '0';
-        setTimeout(() => {
-          if (type === 'search-engine' || type === 'search-heading') { searchEnginesData[target.dataset.folderIndex].engines.splice(target.dataset.itemIndex, 1); saveSearchEngines(); renderSearchEngines(); }
-        }, 200);
-      }
-    });
-
-    document.getElementById('menuRenameFolder').addEventListener('click', () => {
-      const target = window.currentContextTarget; const type = window.currentContextType;
-      if (target) {
-        if (type === 'search-folder') {
-          const folder = searchEnginesData[parseInt(target.dataset.index)];
-          openModal("フォルダ名を変更", folder.folderName, "", "", false, "", false, (newName) => { if (newName && newName.trim()) { folder.folderName = newName.trim(); saveSearchEngines(); renderSearchEngines(); } });
-        }
-      }
-      document.getElementById('contextMenu').style.display = 'none';
-    });
-
-    document.getElementById('menuRemoveFolder').addEventListener('click', () => {
-      const target = window.currentContextTarget; const type = window.currentContextType;
-      if (target) {
-        const dataArr = searchEnginesData;
-        if (dataArr.length <= 1) { alert("最後のフォルダは削除できません。"); return; }
-        if (confirm("このフォルダと中身をすべて削除しますか？")) {
-          dataArr.splice(parseInt(target.dataset.index), 1);
-          saveSearchEngines(); renderSearchEngines(); 
-        }
-      }
-      document.getElementById('contextMenu').style.display = 'none';
-    });
-
-    /* =========================================================
-       10. インポート・エクスポート・初期化
-       ========================================================= */
-    document.getElementById('initDataBtn').addEventListener('click', () => { 
-      if(confirm("検索エンジン設定・検索履歴を初期化し、デフォルトに戻します。\nよろしいですか？")) { 
-        localStorage.removeItem('search_engines_data'); localStorage.removeItem('search_history'); localStorage.removeItem('save_history_pref'); localStorage.removeItem('link_open_mode'); localStorage.removeItem('heading_space'); localStorage.removeItem('grid_size'); localStorage.removeItem('edit_mode'); location.reload(); 
-      } 
-    });
+    document.getElementById('initDataBtn').addEventListener('click', () => { if(confirm("すべての設定を初期化しますか？")) { localStorage.clear(); location.reload(); } });
 
     document.getElementById('exportDataBtn').addEventListener('click', () => {
-      const exportObj = { search_engines_data: searchEnginesData, search_history: searchHistory, save_history_pref: settingSaveHistory.checked, link_open_mode: settingLinkOpenMode.value, heading_space: settingHeadingSpace.value, grid_size: settingGridSize.value };
+      const exportObj = { search_engines_data: searchEnginesData, search_history: searchHistory, save_history_pref: settingSaveHistory.checked, link_open_mode: settingLinkOpenMode.value, grid_size: settingGridSize.value };
       const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a'); a.href = url; a.download = "search_launch_backup.json"; a.click(); URL.revokeObjectURL(url);
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "search_launch_backup.json"; a.click(); URL.revokeObjectURL(url);
     });
 
     document.getElementById('importDataBtn').addEventListener('click', () => { document.getElementById('importFileInput').click(); });
@@ -789,10 +920,9 @@
           if (importedData.search_history) localStorage.setItem('search_history', JSON.stringify(importedData.search_history));
           if (importedData.save_history_pref !== undefined) localStorage.setItem('save_history_pref', importedData.save_history_pref);
           if (importedData.link_open_mode !== undefined) localStorage.setItem('link_open_mode', importedData.link_open_mode);
-          if (importedData.heading_space !== undefined) localStorage.setItem('heading_space', importedData.heading_space);
           if (importedData.grid_size !== undefined) localStorage.setItem('grid_size', importedData.grid_size);
-          alert("データのインポートが完了しました。ページを再読み込みします。"); location.reload();
-        } catch (err) { alert("無効なJSONファイルです。"); }
+          alert("復元しました。再読み込みします。"); location.reload();
+        } catch (err) { alert("無効なファイルです。"); }
       }; reader.readAsText(file);
     });
   </script>
