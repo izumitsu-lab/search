@@ -155,6 +155,18 @@
       .card-icon img { max-width: 48px; max-height: 48px; }
     }
 
+    /* ✂️ 削除バッジ（編集モード時に出現） */
+    .card-delete-badge {
+      position: absolute; top: -6px; left: -6px; width: 26px; height: 26px;
+      background: rgba(142, 142, 147, 0.95); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+      border-radius: 50%; display: flex; align-items: center; justify-content: center;
+      z-index: 20; box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+      border: 2px solid var(--card-bg); cursor: pointer; 
+      opacity: 0; pointer-events: none; transition: opacity 0.2s, transform 0.2s;
+    }
+    .card-delete-badge:active { transform: scale(0.8); }
+    body:not(.read-only-mode) .card:not(.empty-slot) .card-delete-badge { opacity: 1; pointer-events: auto; }
+
     /* 🌟 ボトムナビゲーション (App Tab Bar) */
     .app-tab-bar {
       position: fixed; bottom: 0; left: 0; right: 0;
@@ -219,7 +231,7 @@
     .sheet-item-check { width: 20px; height: 20px; fill: var(--app-blue); opacity: 0; flex-shrink: 0; transition: opacity 0.2s; }
     .sheet-item.active .sheet-item-check { opacity: 1; }
 
-    /* ⚙️ 設定用ポップアップ（モーダル） */
+    /* ⚙️ 設定用ポップアップ（モーダル化） */
     .settings-modal-box {
       width: 90%; max-width: 440px; padding: 24px 20px 20px;
       max-height: 85vh; display: flex; flex-direction: column;
@@ -282,7 +294,7 @@
     .modal-inputs input, .modal-inputs select { padding: 14px 16px; border-radius: 14px; border: 1px solid var(--nav-border); background: var(--bg-color); color: var(--text-main); font-size: 15px; outline: none; transition: border-color 0.2s; width: 100%; }
     .modal-inputs input:focus, .modal-inputs select:focus { border-color: var(--app-blue); }
     
-    .modal-actions { display: flex; justify-content: flex-end; gap: 12px; }
+    .modal-actions { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
     .modal-btn { padding: 12px 20px; border-radius: 12px; font-size: 16px; font-weight: 600; cursor: pointer; border: none; }
     .modal-btn.cancel { background: var(--bg-color); color: var(--text-main); }
     .modal-btn.save { background: var(--app-blue); color: #fff; }
@@ -447,8 +459,12 @@
         </select>
       </div>
       <div class="modal-actions">
-        <button id="modalCancelBtn" class="modal-btn cancel">キャンセル</button>
-        <button id="modalSaveBtn" class="modal-btn save">保存</button>
+        <!-- 削除ボタン（左寄せ用） -->
+        <button id="modalDeleteBtn" class="modal-btn danger" style="display:none; color: var(--app-red); background: transparent; padding: 8px 4px; box-shadow: none;">削除</button>
+        <div style="display: flex; gap: 12px; margin-left: auto;">
+          <button id="modalCancelBtn" class="modal-btn cancel">キャンセル</button>
+          <button id="modalSaveBtn" class="modal-btn save">保存</button>
+        </div>
       </div>
     </div>
   </div>
@@ -549,6 +565,17 @@
         modalFolderSelect.style.display = 'none';
       }
 
+      // 削除ボタン制御
+      const deleteBtn = document.getElementById('modalDeleteBtn');
+      if (options.showDelete && options.deleteCallback) {
+        deleteBtn.style.display = 'block';
+        deleteBtn.onclick = () => {
+          if (confirm("削除しますか？")) { options.deleteCallback(); closeInputModal(); }
+        };
+      } else {
+        deleteBtn.style.display = 'none';
+      }
+
       modalCallback = options.callback; 
       inputModalOverlay.style.display = 'flex'; setTimeout(() => inputModalOverlay.classList.add('show'), 10);
       modalInput1.focus();
@@ -584,11 +611,26 @@
     function saveSearchEngines() { localStorage.setItem('search_engines_data', JSON.stringify(searchEnginesData)); }
 
     /* =========================================================
-       7. 検索窓・履歴
+       7. 検索窓・履歴（戻るボタン対応含む）
        ========================================================= */
     const searchInput = document.getElementById('searchInput'); const clearBtn = document.getElementById('clearBtn'); const historyBtn = document.getElementById('historyBtn'); const historyPopup = document.getElementById('historyPopup'); const HISTORY_KEY = 'search_history'; let searchHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
     
-    const toggleClearBtn = () => clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none'; searchInput.addEventListener('input', toggleClearBtn); clearBtn.addEventListener('click', () => { searchInput.value = ''; toggleClearBtn(); searchInput.focus(); });
+    // 🌟 戻るボタンで戻った時にキーワードを復元
+    window.addEventListener('pageshow', () => {
+      const savedKeyword = sessionStorage.getItem('last_keyword');
+      if (savedKeyword) { searchInput.value = savedKeyword; toggleClearBtn(); }
+    });
+
+    const toggleClearBtn = () => {
+      clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
+      sessionStorage.setItem('last_keyword', searchInput.value);
+    };
+    searchInput.addEventListener('input', toggleClearBtn); 
+    
+    clearBtn.addEventListener('click', () => { 
+      searchInput.value = ''; sessionStorage.removeItem('last_keyword');
+      toggleClearBtn(); searchInput.focus(); 
+    });
     
     const executeSearch = (url, home, overrideMode) => { 
       const query = searchInput.value.trim(); 
@@ -622,7 +664,6 @@
         item.addEventListener('click', (e) => {
           if (e.button === 2) return;
           const slider = document.getElementById('searchSliderContainer');
-          // CSSクラスで一時的に smooth スクロールを解除してパッと切り替える
           slider.classList.add('no-smooth');
           slider.scrollLeft = slider.clientWidth * index;
           setTimeout(() => slider.classList.remove('no-smooth'), 50);
@@ -808,15 +849,35 @@
             btn.innerHTML = `<div class="card-icon">${engineIconHtml}</div><div class="card-title">${engine.name}</div>`;
             btn.dataset.url = engine.url;
             
+            // 🌟 削除バッジ（左上のマイナスアイコン）
+            const deleteBadge = document.createElement('div');
+            deleteBadge.className = 'card-delete-badge';
+            deleteBadge.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M19 13H5v-2h14v2z"/></svg>';
+            deleteBadge.addEventListener('click', (e) => {
+              e.stopPropagation(); // モーダルを開かないようにブロック
+              if (confirm(`「${engine.name}」を削除しますか？`)) {
+                searchEnginesData[index].engines[engIndex] = { isEmpty: true };
+                saveSearchEngines(); renderSearchEngines();
+              }
+            });
+            btn.appendChild(deleteBadge);
+            
             // タップ時の挙動 (通常時は検索、編集モード時は設定)
             btn.addEventListener('click', (e) => {
+              if (e.target.closest('.card-delete-badge')) return; // 削除バッジタップ時は何もしない
+              
               if (!isEditMode) {
                 if (e.metaKey || e.ctrlKey) return; executeSearch(engine.url, engine.home, engine.openMode);
               } else {
-                // 編集モード時のタップ：個別設定（フォルダ移動含む）を開く
+                // 編集モード時のタップ：個別設定（フォルダ移動・削除含む）を開く
                 openInputModal({
                   title: "アイコンの編集", val1: engine.name, val2: engine.url, val3: engine.iconUrl || "", openModeVal: engine.openMode || "default",
                   showUrl: true, showIconInput: true, showOpenMode: true, showFolderSelect: true, folderIndex: index,
+                  showDelete: true, // 🌟 モーダル内の削除ボタンを有効化
+                  deleteCallback: () => {
+                    searchEnginesData[index].engines[engIndex] = { isEmpty: true };
+                    saveSearchEngines(); renderSearchEngines();
+                  },
                   callback: (name, url, icon, mode, targetFolderIdx) => {
                     if (name) engine.name = name; 
                     if (url) { if (!url.startsWith('http')) url = 'https://' + url; engine.url = url; try{ const u = new URL(url); engine.home = u.origin; engine.domain = u.hostname; }catch(err){} }
@@ -840,6 +901,8 @@
           // スマホ向けタッチドラッグ (スワップ方式)
           btn.addEventListener('touchstart', (e) => {
             if (!isEditMode || e.touches.length > 1) return;
+            if (e.target.closest('.card-delete-badge')) return; // 削除バッジではドラッグ開始しない
+
             const touch = e.touches[0];
             touchTarget = { btn, folderIndex: index, itemIndex: engIndex };
             
@@ -891,6 +954,13 @@
             touchTarget = null; touchOverSlot = null;
           });
           
+          // PC向けドラッグ処理 (削除バッジ回避)
+          btn.addEventListener('dragstart', (e) => { 
+            if(!isEditMode) { e.preventDefault(); return; } 
+            if (e.target.closest('.card-delete-badge')) { e.preventDefault(); return; }
+            draggedSearch = { folderIndex: index, itemIndex: engIndex, element: btn }; setTimeout(() => btn.classList.add('dragging'), 0); 
+          });
+
           gridDiv.appendChild(btn);
         });
 
@@ -905,7 +975,7 @@
     document.getElementById('initDataBtn').addEventListener('click', () => { if(confirm("すべての設定を初期化しますか？")) { localStorage.clear(); location.reload(); } });
 
     document.getElementById('exportDataBtn').addEventListener('click', () => {
-      const exportObj = { search_engines_data: searchEnginesData, search_history: searchHistory, save_history_pref: settingSaveHistory.checked, link_open_mode: settingLinkOpenMode.value, grid_size: settingGridSize.value };
+      const exportObj = { search_engines_data: searchEnginesData, search_history: searchHistory, save_history_pref: settingSaveHistory.checked, link_open_mode: settingLinkOpenMode.value };
       const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
       const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = "search_launch_backup.json"; a.click(); URL.revokeObjectURL(url);
     });
@@ -920,7 +990,6 @@
           if (importedData.search_history) localStorage.setItem('search_history', JSON.stringify(importedData.search_history));
           if (importedData.save_history_pref !== undefined) localStorage.setItem('save_history_pref', importedData.save_history_pref);
           if (importedData.link_open_mode !== undefined) localStorage.setItem('link_open_mode', importedData.link_open_mode);
-          if (importedData.grid_size !== undefined) localStorage.setItem('grid_size', importedData.grid_size);
           alert("復元しました。再読み込みします。"); location.reload();
         } catch (err) { alert("無効なファイルです。"); }
       }; reader.readAsText(file);
