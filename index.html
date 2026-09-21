@@ -47,7 +47,9 @@
       }
     }
 
+    /* ドラッグ時のブラウザデフォルト挙動を防止 */
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    img, svg { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -82,7 +84,7 @@
     .search-input:focus { border-color: var(--app-blue); box-shadow: 0 4px 20px rgba(0, 122, 255, 0.2); }
     .search-input::placeholder { color: var(--text-sub); opacity: 0.7; }
     .search-actions { position: absolute; right: 6px; display: flex; align-items: center; gap: 2px; }
-    .icon-btn { background: transparent; border: none; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; fill: var(--text-sub); transition: background 0.2s, fill 0.2s; }
+    .icon-btn { background: transparent; border: none; padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; fill: var(--text-sub); transition: background 0.2s, fill 0.2s; pointer-events: auto;}
     .icon-btn:hover { background: var(--nav-border); fill: var(--text-main); }
     .icon-btn svg { width: 18px; height: 18px; }
 
@@ -116,7 +118,7 @@
     .history-item:hover { background: var(--menu-hover); }
     .history-icon { width: 18px; height: 18px; fill: var(--text-sub); flex-shrink: 0; }
     .history-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-    .history-delete { padding: 6px; fill: var(--text-sub); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: -8px; transition: 0.2s; }
+    .history-delete { padding: 6px; fill: var(--text-sub); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: -8px; transition: 0.2s; pointer-events: auto;}
     .history-delete:hover { background: rgba(255,0,0,0.1); fill: var(--app-red); }
 
     /* 📂 スライダー＆グリッド */
@@ -131,7 +133,7 @@
     .engine-grid { 
       display: grid; gap: 16px; max-width: 600px; margin: 0 auto; 
       align-content: start; min-height: 100%;
-      grid-template-columns: repeat(3, 1fr); /* 常に3列 */
+      grid-template-columns: repeat(3, 1fr);
     }
     @media (max-width: 768px) { .engine-grid { gap: 12px; } }
 
@@ -139,10 +141,9 @@
     .card { background: var(--card-bg); border-radius: 18px; color: var(--text-main); display: flex; flex-direction: column; align-items: center; justify-content: space-between; aspect-ratio: 4 / 3; padding: 16px 12px 12px; transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.2s; box-shadow: 0 4px 12px var(--shadow-color); border: 1px solid var(--nav-border); cursor: pointer; user-select: none; width: 100%; min-width: 0; position: relative;}
     .card:not(.empty-slot):active { transform: scale(0.92); }
     @media (hover: hover) { .card:not(.empty-slot):hover { transform: translateY(-2px); box-shadow: 0 8px 24px var(--hover-shadow); } }
-    .card.dragging { opacity: 0.4; transform: scale(0.95) !important; box-shadow: none !important; z-index: 100; }
     .card.drag-over-slot { transform: scale(1.05); box-shadow: 0 0 0 3px var(--app-blue); z-index: 10; }
     .card-icon { width: 100%; flex-grow: 1; display: flex; align-items: center; justify-content: center; margin-bottom: 8px; pointer-events: none; min-height: 0; }
-    .card-icon img { max-width: 56px; max-height: 56px; width: 100%; height: 100%; object-fit: contain; border-radius: 12px; }
+    .card-icon img { max-width: 56px; max-height: 56px; width: 100%; height: 100%; object-fit: contain; border-radius: 12px; pointer-events: none; }
     .card-title { font-size: 13px; font-weight: 600; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-sub); pointer-events: none; }
     
     .card.empty-slot { background: transparent; border: 2px dashed var(--text-sub); opacity: 0.5; box-shadow: none; justify-content: center; transition: all 0.2s; }
@@ -201,7 +202,7 @@
     .bottom-sheet-overlay {
       position: fixed; top: 0; left: 0; right: 0; bottom: 0;
       background: rgba(0,0,0,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-      z-index: 9000; display: none; /* アニメーションなし */
+      z-index: 9000; display: none;
     }
     .bottom-sheet {
       position: absolute; bottom: 0; left: 0; right: 0;
@@ -231,7 +232,7 @@
     .sheet-item-check { width: 20px; height: 20px; fill: var(--app-blue); opacity: 0; flex-shrink: 0; transition: opacity 0.2s; }
     .sheet-item.active .sheet-item-check { opacity: 1; }
 
-    /* ⚙️ 設定用ポップアップ（モーダル化） */
+    /* ⚙️ 設定用ポップアップ */
     .settings-modal-box {
       width: 90%; max-width: 440px; padding: 24px 20px 20px;
       max-height: 85vh; display: flex; flex-direction: column;
@@ -240,7 +241,7 @@
     .settings-close-btn { 
       background: var(--bg-color); border: 1px solid var(--nav-border); border-radius: 50%;
       width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
-      cursor: pointer; fill: var(--text-sub); transition: all 0.2s ease;
+      cursor: pointer; fill: var(--text-sub); transition: all 0.2s ease; pointer-events: auto;
     }
     .settings-close-btn:hover { background: var(--nav-border); fill: var(--text-main); transform: scale(1.05); }
 
@@ -274,9 +275,9 @@
       border: 1px solid var(--nav-border); transition: transform 0.2s, box-shadow 0.2s;
     }
     .folder-manage-item.dragging { box-shadow: 0 10px 24px var(--hover-shadow); z-index: 100; opacity: 0.9; }
-    .folder-manage-item .drag-handle { padding: 14px; color: var(--text-sub); cursor: grab; display: flex; align-items: center; }
+    .folder-manage-item .drag-handle { padding: 14px; color: var(--text-sub); cursor: grab; display: flex; align-items: center; pointer-events: auto;}
     .folder-manage-item .folder-name { flex: 1; font-size: 16px; font-weight: 600; padding: 14px 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; cursor: pointer; }
-    .folder-manage-item .delete-btn { padding: 14px; color: var(--app-red); cursor: pointer; display: flex; align-items: center; }
+    .folder-manage-item .delete-btn { padding: 14px; color: var(--app-red); cursor: pointer; display: flex; align-items: center; pointer-events: auto;}
 
     /* 汎用・コンテキストメニュー等 */
     .context-menu { display: none; position: fixed; background: var(--menu-bg); border: 1px solid var(--menu-border); box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15); border-radius: 16px; padding: 6px 0; z-index: 9999; min-width: 220px; backdrop-filter: blur(30px); -webkit-backdrop-filter: blur(30px); }
@@ -299,11 +300,17 @@
     .modal-btn.cancel { background: var(--bg-color); color: var(--text-main); }
     .modal-btn.save { background: var(--app-blue); color: #fff; }
 
-    /* 編集モード：オフの時のUI調整 */
-    body.read-only-mode .card.empty-slot { display: none !important; }
+    /* 編集モード：オフの時のUI調整（透明にして場所を維持） */
+    body.read-only-mode .card.empty-slot { 
+      opacity: 0 !important; 
+      pointer-events: none !important; 
+      border: none !important; 
+      box-shadow: none !important; 
+      background: transparent !important; 
+    }
   </style>
 </head>
-<body>
+<body class="grid-size-140">
 
   <div class="main-content">
     
@@ -360,7 +367,7 @@
     </div>
   </div>
 
-  <!-- ⚙️ 設定用ポップアップ（モーダル化） -->
+  <!-- ⚙️ 設定用ポップアップ -->
   <div id="settingsModal" class="modal-overlay">
     <div class="modal-box settings-modal-box">
       <div class="settings-header">
@@ -476,7 +483,6 @@
     const settingLinkOpenMode = document.getElementById('settingLinkOpenMode');
     if (localStorage.getItem('link_open_mode')) settingLinkOpenMode.value = localStorage.getItem('link_open_mode');
 
-    // リンクを開く（バックグラウンド廃止）
     function openLink(url, overrideMode) {
       const mode = (overrideMode && overrideMode !== 'default') ? overrideMode : settingLinkOpenMode.value;
       if (mode === 'self') window.location.href = url;
@@ -508,7 +514,7 @@
     navEditToggle.addEventListener('click', () => { isEditMode = !isEditMode; updateEditMode(); renderSearchEngines(); renderBottomSheet(); });
 
     /* =========================================================
-       3. 設定モーダルの制御 (操作したらパッと閉じる)
+       3. 設定モーダルの制御
        ========================================================= */
     const settingsModal = document.getElementById('settingsModal');
     
@@ -519,7 +525,6 @@
     document.getElementById('settingsCloseBtn').addEventListener('click', closeSettingsModal);
     settingsModal.addEventListener('click', (e) => { if(e.target === settingsModal) closeSettingsModal(); });
 
-    // 設定を変更したらモーダルを閉じる
     settingLinkOpenMode.addEventListener('change', (e) => { localStorage.setItem('link_open_mode', e.target.value); closeSettingsModal(); });
     const settingSaveHistory = document.getElementById('settingSaveHistory');
     if (localStorage.getItem('save_history_pref') !== null) settingSaveHistory.checked = localStorage.getItem('save_history_pref') === 'true'; 
@@ -551,7 +556,6 @@
       if (options.showIconInput) { modalInput3.value = options.val3 || ""; modalInput3.style.display = 'block'; } else { modalInput3.style.display = 'none'; }
       if (options.showOpenMode) { modalOpenMode.value = options.openModeVal || 'default'; modalOpenMode.style.display = 'block'; } else { modalOpenMode.style.display = 'none'; }
       
-      // フォルダ移動セレクト
       if (options.showFolderSelect) {
         modalFolderSelect.innerHTML = '';
         searchEnginesData.forEach((f, i) => {
@@ -565,7 +569,6 @@
         modalFolderSelect.style.display = 'none';
       }
 
-      // 削除ボタン制御
       const deleteBtn = document.getElementById('modalDeleteBtn');
       if (options.showDelete && options.deleteCallback) {
         deleteBtn.style.display = 'block';
@@ -615,7 +618,6 @@
        ========================================================= */
     const searchInput = document.getElementById('searchInput'); const clearBtn = document.getElementById('clearBtn'); const historyBtn = document.getElementById('historyBtn'); const historyPopup = document.getElementById('historyPopup'); const HISTORY_KEY = 'search_history'; let searchHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
     
-    // 🌟 戻るボタンで戻った時にキーワードを復元
     window.addEventListener('pageshow', () => {
       const savedKeyword = sessionStorage.getItem('last_keyword');
       if (savedKeyword) { searchInput.value = savedKeyword; toggleClearBtn(); }
@@ -646,7 +648,7 @@
     document.addEventListener('click', (e) => { if (!historyPopup.contains(e.target) && e.target !== historyBtn) historyPopup.style.display = 'none'; });
 
     /* =========================================================
-       8. フォルダの選択ボトムシート (アニメーションなしでパッと切り替え)
+       8. フォルダの選択ボトムシート
        ========================================================= */
     const sheetFolderList = document.getElementById('sheetFolderList');
     
@@ -674,7 +676,7 @@
     }
 
     /* =========================================================
-       9. 📂 フォルダの管理モーダル (並び替え・追加・削除・名前変更)
+       9. 📂 フォルダの管理モーダル
        ========================================================= */
     const folderManageModal = document.getElementById('folderManageModal');
     
@@ -704,7 +706,6 @@
           </div>
         `;
         
-        // 名前変更
         item.querySelector('.folder-name').addEventListener('click', () => {
           openInputModal({
             title: "フォルダ名を変更", val1: folder.folderName, 
@@ -717,7 +718,6 @@
           });
         });
         
-        // 削除
         item.querySelector('.delete-btn').addEventListener('click', () => {
           if(searchEnginesData.length <= 1) { alert("最後のフォルダは削除できません。"); return; }
           if(confirm(`フォルダ「${folder.folderName}」を削除しますか？`)) {
@@ -747,37 +747,43 @@
       });
     });
 
-    // フォルダのタッチ＆ドラッグ並び替え
     let draggingFolderItem = null;
     let folderDragStartIndex = -1;
     function setupFolderDrag() {
       const list = document.getElementById('folderManageList');
       let currentY = 0;
       
-      list.addEventListener('touchstart', (e) => {
+      const startDrag = (e) => {
         const handle = e.target.closest('.drag-handle');
         if (!handle) return;
+        if (e.type === 'mousedown' && e.button !== 0) return;
         e.stopPropagation();
         
         draggingFolderItem = handle.closest('.folder-manage-item');
         folderDragStartIndex = Array.from(list.children).indexOf(draggingFolderItem);
         draggingFolderItem.classList.add('dragging');
-      }, {passive: false});
 
-      list.addEventListener('touchmove', (e) => {
+        if (e.type === 'mousedown') {
+          document.addEventListener('mousemove', moveDrag, {passive: false});
+          document.addEventListener('mouseup', endDrag);
+        }
+      };
+
+      const moveDrag = (e) => {
         if (!draggingFolderItem) return;
-        e.preventDefault(); // スクロール防止
-        currentY = e.touches[0].clientY;
+        e.preventDefault(); 
+        currentY = e.clientY || (e.touches && e.touches[0].clientY);
+        const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         
-        const overItem = document.elementFromPoint(e.touches[0].clientX, e.touches[0].clientY)?.closest('.folder-manage-item');
+        const overItem = document.elementFromPoint(clientX, currentY)?.closest('.folder-manage-item');
         if (overItem && overItem !== draggingFolderItem) {
           const rect = overItem.getBoundingClientRect();
           const next = (currentY - rect.top) / (rect.height) > 0.5;
           list.insertBefore(draggingFolderItem, next ? overItem.nextSibling : overItem);
         }
-      }, {passive: false});
+      };
 
-      list.addEventListener('touchend', (e) => {
+      const endDrag = (e) => {
         if (!draggingFolderItem) return;
         draggingFolderItem.classList.remove('dragging');
         
@@ -786,15 +792,22 @@
           const moved = searchEnginesData.splice(folderDragStartIndex, 1)[0];
           searchEnginesData.splice(newIndex, 0, moved);
           saveSearchEngines(); renderSearchEngines();
-          // 表示位置の補正
           if(currentFolderIndex === folderDragStartIndex) currentFolderIndex = newIndex;
         }
         draggingFolderItem = null;
-      });
+
+        document.removeEventListener('mousemove', moveDrag);
+        document.removeEventListener('mouseup', endDrag);
+      };
+
+      list.addEventListener('touchstart', startDrag, {passive: false});
+      list.addEventListener('touchmove', moveDrag, {passive: false});
+      list.addEventListener('touchend', endDrag);
+      list.addEventListener('mousedown', startDrag);
     }
 
     /* =========================================================
-       10. メインスライダー (アイコン一覧) 描画 & スマホドラッグ & HUD
+       10. メインスライダー (アイコン一覧) 描画 & D&D & HUD
        ========================================================= */
     const searchSlider = document.getElementById('searchSliderContainer');
     let touchClone = null; let touchTarget = null; let touchOverSlot = null;
@@ -849,12 +862,12 @@
             btn.innerHTML = `<div class="card-icon">${engineIconHtml}</div><div class="card-title">${engine.name}</div>`;
             btn.dataset.url = engine.url;
             
-            // 🌟 削除バッジ（左上のマイナスアイコン）
+            // 🌟 削除バッジを追加
             const deleteBadge = document.createElement('div');
             deleteBadge.className = 'card-delete-badge';
             deleteBadge.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M19 13H5v-2h14v2z"/></svg>';
             deleteBadge.addEventListener('click', (e) => {
-              e.stopPropagation(); // モーダルを開かないようにブロック
+              e.stopPropagation(); 
               if (confirm(`「${engine.name}」を削除しますか？`)) {
                 searchEnginesData[index].engines[engIndex] = { isEmpty: true };
                 saveSearchEngines(); renderSearchEngines();
@@ -862,18 +875,19 @@
             });
             btn.appendChild(deleteBadge);
             
-            // タップ時の挙動 (通常時は検索、編集モード時は設定)
+            let isDraggingIcon = false; // クリックとドラッグの判別用フラグ
+
             btn.addEventListener('click', (e) => {
-              if (e.target.closest('.card-delete-badge')) return; // 削除バッジタップ時は何もしない
+              if (e.target.closest('.card-delete-badge')) return; 
+              if (isDraggingIcon) return; // ドラッグ直後のクリックは無視
               
               if (!isEditMode) {
                 if (e.metaKey || e.ctrlKey) return; executeSearch(engine.url, engine.home, engine.openMode);
               } else {
-                // 編集モード時のタップ：個別設定（フォルダ移動・削除含む）を開く
                 openInputModal({
                   title: "アイコンの編集", val1: engine.name, val2: engine.url, val3: engine.iconUrl || "", openModeVal: engine.openMode || "default",
                   showUrl: true, showIconInput: true, showOpenMode: true, showFolderSelect: true, folderIndex: index,
-                  showDelete: true, // 🌟 モーダル内の削除ボタンを有効化
+                  showDelete: true, 
                   deleteCallback: () => {
                     searchEnginesData[index].engines[engIndex] = { isEmpty: true };
                     saveSearchEngines(); renderSearchEngines();
@@ -883,7 +897,6 @@
                     if (url) { if (!url.startsWith('http')) url = 'https://' + url; engine.url = url; try{ const u = new URL(url); engine.home = u.origin; engine.domain = u.hostname; }catch(err){} }
                     engine.iconUrl = icon; engine.openMode = mode;
                     
-                    // フォルダ移動処理
                     if (targetFolderIdx !== index) {
                       searchEnginesData[index].engines[engIndex] = { isEmpty: true };
                       const emptySlotIdx = searchEnginesData[targetFolderIdx].engines.findIndex(e => e.isEmpty);
@@ -896,70 +909,91 @@
                 });
               }
             });
-          }
 
-          // スマホ向けタッチドラッグ (スワップ方式)
-          btn.addEventListener('touchstart', (e) => {
-            if (!isEditMode || e.touches.length > 1) return;
-            if (e.target.closest('.card-delete-badge')) return; // 削除バッジではドラッグ開始しない
+            // 🌟 PC/スマホ共通の独自ドラッグ＆ドロップ処理
+            const startDrag = (e) => {
+              if (!isEditMode) return;
+              if (e.type === 'touchstart' && e.touches.length > 1) return;
+              if (e.type === 'mousedown' && e.button !== 0) return;
+              if (e.target.closest('.card-delete-badge')) return; 
 
-            const touch = e.touches[0];
-            touchTarget = { btn, folderIndex: index, itemIndex: engIndex };
-            
-            const rect = btn.getBoundingClientRect();
-            touchClone = btn.cloneNode(true);
-            touchClone.style.position = 'fixed'; touchClone.style.left = rect.left + 'px'; touchClone.style.top = rect.top + 'px';
-            touchClone.style.width = rect.width + 'px'; touchClone.style.height = rect.height + 'px';
-            touchClone.style.opacity = '0.9'; touchClone.style.zIndex = '9999'; touchClone.style.pointerEvents = 'none';
-            touchClone.style.transform = 'scale(1.1)'; touchClone.style.transition = 'none';
-            touchClone.style.boxShadow = '0 10px 24px rgba(0,0,0,0.2)';
-            document.body.appendChild(touchClone);
-            
-            btn.style.opacity = '0.3';
-          }, {passive: false});
+              isDraggingIcon = false;
+              touchTarget = { btn, folderIndex: index, itemIndex: engIndex };
+              
+              const rect = btn.getBoundingClientRect();
+              touchClone = btn.cloneNode(true);
+              touchClone.style.position = 'fixed'; 
+              touchClone.style.left = rect.left + 'px'; 
+              touchClone.style.top = rect.top + 'px';
+              touchClone.style.width = rect.width + 'px'; 
+              touchClone.style.height = rect.height + 'px';
+              touchClone.style.opacity = '0.9'; 
+              touchClone.style.zIndex = '9999'; 
+              touchClone.style.pointerEvents = 'none';
+              touchClone.style.transform = 'scale(1.1)'; 
+              touchClone.style.transition = 'none';
+              touchClone.style.boxShadow = '0 10px 24px rgba(0,0,0,0.2)';
+              document.body.appendChild(touchClone);
+              
+              btn.style.opacity = '0.3';
 
-          btn.addEventListener('touchmove', (e) => {
-            if (!touchClone || !isEditMode) return;
-            e.preventDefault();
-            const touch = e.touches[0];
-            touchClone.style.left = (touch.clientX - touchClone.offsetWidth / 2) + 'px';
-            touchClone.style.top = (touch.clientY - touchClone.offsetHeight / 2) + 'px';
-
-            const overEl = document.elementFromPoint(touch.clientX, touch.clientY);
-            const overCard = overEl ? overEl.closest('.card') : null;
-
-            if (touchOverSlot && touchOverSlot !== overCard) touchOverSlot.classList.remove('drag-over-slot');
-            if (overCard && overCard !== btn && parseInt(overCard.dataset.folderIndex) === index) {
-              overCard.classList.add('drag-over-slot');
-              touchOverSlot = overCard;
-            } else { touchOverSlot = null; }
-          }, {passive: false});
-
-          btn.addEventListener('touchend', (e) => {
-            if (!touchClone || !isEditMode) return;
-            touchClone.remove(); touchClone = null; btn.style.opacity = '1';
-
-            if (touchOverSlot) {
-              touchOverSlot.classList.remove('drag-over-slot');
-              const targetFolderIndex = parseInt(touchOverSlot.dataset.folderIndex);
-              const targetItemIndex = parseInt(touchOverSlot.dataset.itemIndex);
-
-              if (index === targetFolderIndex && engIndex !== targetItemIndex) {
-                const temp = searchEnginesData[index].engines[engIndex];
-                searchEnginesData[index].engines[engIndex] = searchEnginesData[index].engines[targetItemIndex];
-                searchEnginesData[index].engines[targetItemIndex] = temp;
-                ensureEmptySlots(index); saveSearchEngines(); renderSearchEngines();
+              if (e.type === 'mousedown') {
+                document.addEventListener('mousemove', moveDrag, {passive: false});
+                document.addEventListener('mouseup', endDrag);
               }
-            }
-            touchTarget = null; touchOverSlot = null;
-          });
-          
-          // PC向けドラッグ処理 (削除バッジ回避)
-          btn.addEventListener('dragstart', (e) => { 
-            if(!isEditMode) { e.preventDefault(); return; } 
-            if (e.target.closest('.card-delete-badge')) { e.preventDefault(); return; }
-            draggedSearch = { folderIndex: index, itemIndex: engIndex, element: btn }; setTimeout(() => btn.classList.add('dragging'), 0); 
-          });
+            };
+
+            const moveDrag = (e) => {
+              if (!touchClone || !isEditMode) return;
+              isDraggingIcon = true;
+              e.preventDefault(); 
+              
+              const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+              const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+
+              touchClone.style.left = (clientX - touchClone.offsetWidth / 2) + 'px';
+              touchClone.style.top = (clientY - touchClone.offsetHeight / 2) + 'px';
+
+              const overEl = document.elementFromPoint(clientX, clientY);
+              const overCard = overEl ? overEl.closest('.card') : null;
+
+              if (touchOverSlot && touchOverSlot !== overCard) touchOverSlot.classList.remove('drag-over-slot');
+              if (overCard && overCard !== btn && parseInt(overCard.dataset.folderIndex) === index) {
+                overCard.classList.add('drag-over-slot');
+                touchOverSlot = overCard;
+              } else { touchOverSlot = null; }
+            };
+
+            const endDrag = (e) => {
+              if (!touchClone || !isEditMode) return;
+              touchClone.remove(); touchClone = null; btn.style.opacity = '1';
+
+              if (touchOverSlot) {
+                touchOverSlot.classList.remove('drag-over-slot');
+                const targetFolderIndex = parseInt(touchOverSlot.dataset.folderIndex);
+                const targetItemIndex = parseInt(touchOverSlot.dataset.itemIndex);
+
+                if (index === targetFolderIndex && engIndex !== targetItemIndex) {
+                  const temp = searchEnginesData[index].engines[engIndex];
+                  searchEnginesData[index].engines[engIndex] = searchEnginesData[index].engines[targetItemIndex];
+                  searchEnginesData[index].engines[targetItemIndex] = temp;
+                  ensureEmptySlots(index); saveSearchEngines(); renderSearchEngines();
+                }
+              }
+              touchTarget = null; touchOverSlot = null;
+
+              document.removeEventListener('mousemove', moveDrag);
+              document.removeEventListener('mouseup', endDrag);
+              
+              // クリックイベントの誤爆を防ぐため少し遅らせてフラグを戻す
+              setTimeout(() => { isDraggingIcon = false; }, 100);
+            };
+
+            btn.addEventListener('touchstart', startDrag, {passive: false});
+            btn.addEventListener('touchmove', moveDrag, {passive: false});
+            btn.addEventListener('touchend', endDrag);
+            btn.addEventListener('mousedown', startDrag);
+          }
 
           gridDiv.appendChild(btn);
         });
