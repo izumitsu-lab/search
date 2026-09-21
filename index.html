@@ -47,7 +47,9 @@
       }
     }
 
+    /* ドラッグ時のブラウザデフォルト挙動を防止 */
     * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+    img, svg { -webkit-user-drag: none; user-select: none; pointer-events: none; }
 
     body {
       font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Helvetica Neue", Arial, sans-serif;
@@ -512,7 +514,7 @@
     navEditToggle.addEventListener('click', () => { isEditMode = !isEditMode; updateEditMode(); renderSearchEngines(); renderBottomSheet(); });
 
     /* =========================================================
-       3. 設定モーダルの制御
+       3. 設定モーダルの制御 (操作したらパッと閉じる)
        ========================================================= */
     const settingsModal = document.getElementById('settingsModal');
     
@@ -616,24 +618,31 @@
        ========================================================= */
     const searchInput = document.getElementById('searchInput'); const clearBtn = document.getElementById('clearBtn'); const historyBtn = document.getElementById('historyBtn'); const historyPopup = document.getElementById('historyPopup'); const HISTORY_KEY = 'search_history'; let searchHistory = JSON.parse(localStorage.getItem(HISTORY_KEY)) || [];
     
-    window.addEventListener('pageshow', () => {
-      const savedKeyword = sessionStorage.getItem('last_keyword');
-      if (savedKeyword) { searchInput.value = savedKeyword; toggleClearBtn(); }
-    });
+    // 🌟 戻るボタンで戻った時にキーワードを強制的に復元
+    const restoreKeyword = () => {
+      const savedKeyword = localStorage.getItem('last_keyword');
+      if (savedKeyword !== null) { 
+        searchInput.value = savedKeyword; 
+        clearBtn.style.display = savedKeyword.length > 0 ? 'flex' : 'none';
+      }
+    };
+    window.addEventListener('pageshow', () => setTimeout(restoreKeyword, 10));
+    document.addEventListener('DOMContentLoaded', restoreKeyword);
 
     const toggleClearBtn = () => {
       clearBtn.style.display = searchInput.value.length > 0 ? 'flex' : 'none';
-      sessionStorage.setItem('last_keyword', searchInput.value);
+      localStorage.setItem('last_keyword', searchInput.value);
     };
     searchInput.addEventListener('input', toggleClearBtn); 
     
     clearBtn.addEventListener('click', () => { 
-      searchInput.value = ''; sessionStorage.removeItem('last_keyword');
+      searchInput.value = ''; localStorage.setItem('last_keyword', '');
       toggleClearBtn(); searchInput.focus(); 
     });
     
     const executeSearch = (url, home, overrideMode) => { 
       const query = searchInput.value.trim(); 
+      localStorage.setItem('last_keyword', searchInput.value); // 検索実行時にも確実に保存
       if (query) { 
         if (settingSaveHistory.checked) { searchHistory = searchHistory.filter(k => k !== query); searchHistory.unshift(query); if (searchHistory.length > 20) searchHistory.pop(); localStorage.setItem(HISTORY_KEY, JSON.stringify(searchHistory)); } 
         openLink(url + encodeURIComponent(query), overrideMode); 
@@ -745,17 +754,11 @@
       });
     });
 
-    // 🌟 多重登録防止フラグ
-    let isFolderDragSetup = false;
     let draggingFolderItem = null;
     let folderDragStartIndex = -1;
-    let folderDragClone = null;
-
     function setupFolderDrag() {
-      if (isFolderDragSetup) return;
-      isFolderDragSetup = true;
-
       const list = document.getElementById('folderManageList');
+      let currentY = 0;
       
       const startDrag = (e) => {
         const handle = e.target.closest('.drag-handle');
@@ -765,20 +768,7 @@
         
         draggingFolderItem = handle.closest('.folder-manage-item');
         folderDragStartIndex = Array.from(list.children).indexOf(draggingFolderItem);
-        
-        const rect = draggingFolderItem.getBoundingClientRect();
-        folderDragClone = draggingFolderItem.cloneNode(true);
-        folderDragClone.style.position = 'fixed';
-        folderDragClone.style.left = rect.left + 'px';
-        folderDragClone.style.top = rect.top + 'px';
-        folderDragClone.style.width = rect.width + 'px';
-        folderDragClone.style.height = rect.height + 'px';
-        folderDragClone.style.zIndex = '9999';
-        folderDragClone.style.pointerEvents = 'none'; 
-        folderDragClone.style.boxShadow = '0 10px 24px rgba(0,0,0,0.2)';
-        document.body.appendChild(folderDragClone);
-        
-        draggingFolderItem.style.opacity = '0.3'; 
+        draggingFolderItem.classList.add('dragging');
 
         if (e.type === 'mousedown') {
           document.addEventListener('mousemove', moveDrag, {passive: false});
@@ -787,42 +777,29 @@
       };
 
       const moveDrag = (e) => {
-        if (!draggingFolderItem || !folderDragClone) return;
+        if (!draggingFolderItem) return;
         e.preventDefault(); 
-        const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+        currentY = e.clientY || (e.touches && e.touches[0].clientY);
         const clientX = e.clientX || (e.touches && e.touches[0].clientX);
         
-        folderDragClone.style.top = (clientY - folderDragClone.offsetHeight / 2) + 'px';
-
-        const overItem = document.elementFromPoint(clientX, clientY)?.closest('.folder-manage-item');
+        const overItem = document.elementFromPoint(clientX, currentY)?.closest('.folder-manage-item');
         if (overItem && overItem !== draggingFolderItem) {
           const rect = overItem.getBoundingClientRect();
-          const next = (clientY - rect.top) / (rect.height) > 0.5;
+          const next = (currentY - rect.top) / (rect.height) > 0.5;
           list.insertBefore(draggingFolderItem, next ? overItem.nextSibling : overItem);
         }
       };
 
       const endDrag = (e) => {
         if (!draggingFolderItem) return;
-        
-        if (folderDragClone) {
-          folderDragClone.remove();
-          folderDragClone = null;
-        }
-        draggingFolderItem.style.opacity = '1';
+        draggingFolderItem.classList.remove('dragging');
         
         const newIndex = Array.from(list.children).indexOf(draggingFolderItem);
-        if (folderDragStartIndex !== newIndex && newIndex !== -1) {
+        if (folderDragStartIndex !== newIndex) {
           const moved = searchEnginesData.splice(folderDragStartIndex, 1)[0];
           searchEnginesData.splice(newIndex, 0, moved);
           saveSearchEngines(); renderSearchEngines();
-          if(currentFolderIndex === folderDragStartIndex) {
-              currentFolderIndex = newIndex;
-          } else if (currentFolderIndex > folderDragStartIndex && currentFolderIndex <= newIndex) {
-              currentFolderIndex--;
-          } else if (currentFolderIndex < folderDragStartIndex && currentFolderIndex >= newIndex) {
-              currentFolderIndex++;
-          }
+          if(currentFolderIndex === folderDragStartIndex) currentFolderIndex = newIndex;
         }
         draggingFolderItem = null;
 
@@ -892,7 +869,6 @@
             btn.innerHTML = `<div class="card-icon">${engineIconHtml}</div><div class="card-title">${engine.name}</div>`;
             btn.dataset.url = engine.url;
             
-            // 🌟 削除バッジを追加
             const deleteBadge = document.createElement('div');
             deleteBadge.className = 'card-delete-badge';
             deleteBadge.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="#fff"><path d="M19 13H5v-2h14v2z"/></svg>';
